@@ -1,0 +1,985 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ERP Empreende BB</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: app de gestão com menu lateral por módulo (vira faixa rolável no celular), barra superior com o mês e o caixa, conteúdo em painéis. */
+:root{
+  --bg:#F2F4EC; --surface:#FFFFFF; --surface2:#E7EBDF; --ink:#1B241E; --muted:#5A665D; --line:#D3D9C8;
+  --accent:#A86A00; --accent-bg:#F7E6BC; --brand:#2D5B45; --brand-bg:#DBE8DE; --on-brand:#FFFFFF;
+  --good:#23794A; --good-bg:#DDF0E3; --warn:#9A5B00; --warn-bg:#FBEBCB; --bad:#B0372C; --bad-bg:#F8DEDA;
+  --f-display:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif;
+  --f-body:'Atkinson Hyperlegible','Segoe UI',system-ui,sans-serif;
+  --f-mono:'JetBrains Mono',ui-monospace,Consolas,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121713; --surface:#1A211C; --surface2:#232C25; --ink:#E6EBE2; --muted:#9BA79D; --line:#313B33;
+  --accent:#E9AC3F; --accent-bg:#3A2C10; --brand:#86C6A0; --brand-bg:#1D3326; --on-brand:#0E1A13;
+  --good:#6FCB93; --good-bg:#183224; --warn:#E9AC3F; --warn-bg:#3A2C10; --bad:#F0806F; --bad-bg:#3A1C18; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121713; --surface:#1A211C; --surface2:#232C25; --ink:#E6EBE2; --muted:#9BA79D; --line:#313B33;
+  --accent:#E9AC3F; --accent-bg:#3A2C10; --brand:#86C6A0; --brand-bg:#1D3326; --on-brand:#0E1A13;
+  --good:#6FCB93; --good-bg:#183224; --warn:#E9AC3F; --warn-bg:#3A2C10; --bad:#F0806F; --bad-bg:#3A1C18; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{min-height:100%}
+body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:clamp(1.7rem,3.2vw,2.3rem);font-weight:800;letter-spacing:-.02em}
+h2{font-size:1.2rem;font-weight:700}
+h3{font-size:1.02rem;font-weight:700}
+p{margin:0}
+a{color:var(--brand)}
+button,input,select,textarea{font:inherit;color:inherit}
+.num,td.n,th.n{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.app{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100vh}
+.side{background:var(--surface);border-right:1px solid var(--line);padding-block:20px;padding-inline:14px;position:sticky;top:0;height:100vh;overflow-y:auto;display:flex;flex-direction:column}
+.brand{display:flex;gap:10px;align-items:center;padding:0 6px 18px}
+.logo{width:36px;height:36px;border-radius:9px;background:var(--brand);color:var(--on-brand);display:grid;place-items:center;font-family:var(--f-display);font-weight:800;font-size:15px;flex:none}
+.brand b{font-family:var(--f-display);font-size:15px;display:block;line-height:1.1}
+.brand small{color:var(--muted);font-size:12px}
+.firm{margin:0 6px 14px;padding:10px 12px;border-radius:8px;background:var(--surface2);display:flex;flex-direction:column;gap:1px}
+.firm span{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.firm b{font-family:var(--f-display);font-size:14.5px;overflow-wrap:anywhere}
+.credit{margin-top:auto;padding:16px 6px 0;font-size:12px;color:var(--muted);line-height:1.45;display:flex;flex-direction:column;gap:6px}
+.credit b{color:var(--ink);font-weight:700}
+.foot{border-top:1px solid var(--line);padding-block:16px 28px;padding-inline:24px;font-size:12.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 18px}
+.foot b{color:var(--ink)}
+.about{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.about div{display:flex;flex-direction:column;gap:2px}
+.about span{font-size:11.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.about b{font-family:var(--f-display);font-size:15px}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav a{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;text-decoration:none;color:var(--ink);font-size:14.5px}
+.nav a:hover{background:var(--surface2)}
+.nav a[aria-current="page"]{background:var(--brand-bg);color:var(--brand);font-weight:700}
+.nav .grp{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:14px 10px 4px}
+.nav .badge{margin-left:auto;background:var(--accent-bg);color:var(--accent);border-radius:99px;font-size:11px;padding:1px 7px;font-weight:700}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;padding-block:10px;padding-inline:24px}
+.top .when{font-family:var(--f-display);font-weight:700;font-size:16px}
+.top .when small{display:block;font-family:var(--f-body);font-weight:400;color:var(--muted);font-size:12px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-left:auto;align-items:center}
+.chip{background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:4px 12px;font-size:13px;white-space:nowrap}
+.chip b{font-family:var(--f-mono);font-weight:600}
+.chip.neg b{color:var(--bad)}
+.chip.save{display:inline-flex;align-items:center;gap:6px}
+.chip.save i{width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block}
+.chip.save.ok i{background:var(--good)} .chip.save.busy i{background:var(--accent)} .chip.save.warn i{background:var(--bad)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 13px;cursor:pointer;font-weight:700;font-size:14px;white-space:nowrap}
+.btn:hover{background:var(--surface2)}
+.btn.pri{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
+.btn.pri:hover{filter:brightness(1.08)}
+.btn.acc{background:var(--accent);border-color:var(--accent);color:#fff}
+:root[data-theme="dark"] .btn.acc{color:#1a1206}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn.acc{color:#1a1206}}
+.btn.sm{padding:4px 10px;font-size:13px}
+.btn.ghost{background:transparent}
+.btn.danger{color:var(--bad)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+main#view{padding-block:24px 60px;padding-inline:24px;max-width:1180px;display:flex;flex-direction:column;gap:20px}
+.head{display:flex;flex-direction:column;gap:6px}
+.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--accent);font-weight:700}
+.lead{color:var(--muted);max-width:68ch}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.panel.soft{background:var(--surface2);border-color:transparent}
+.panel h2 + p{color:var(--muted);font-size:14px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.kpi span{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.kpi b{font-family:var(--f-mono);font-size:1.3rem;font-weight:600;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.kpi small{color:var(--muted);font-size:12.5px}
+.kpi.good b{color:var(--good)} .kpi.bad b{color:var(--bad)}
+.news{background:var(--accent-bg);border-radius:var(--r);padding:16px 18px;display:flex;flex-direction:column;gap:4px}
+.news .tag{font-size:11px;text-transform:uppercase;letter-spacing:.09em;font-weight:700;color:var(--accent)}
+.news h3{font-size:1.15rem}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;background:var(--surface2);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.n,th.n{text-align:right;white-space:nowrap}
+tr.tot td{font-weight:700;background:var(--surface2)}
+tr.strong td{font-weight:700;font-size:15px}
+input[type=number],input[type=text],select,textarea{background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:6px 9px;min-width:0}
+input[type=number]{width:96px;font-family:var(--f-mono);text-align:right}
+textarea{width:100%;resize:vertical;min-height:70px;line-height:1.45}
+.form{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.form label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--muted);font-weight:700}
+.form label input,.form label select{font-weight:400;color:var(--ink)}
+.pill{display:inline-block;border-radius:99px;padding:2px 9px;font-size:12px;font-weight:700;white-space:nowrap}
+.pill.good{background:var(--good-bg);color:var(--good)} .pill.warn{background:var(--warn-bg);color:var(--warn)} .pill.bad{background:var(--bad-bg);color:var(--bad)} .pill.mute{background:var(--surface2);color:var(--muted)}
+.list{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}
+.list li{display:flex;gap:10px;align-items:flex-start}
+.dot{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;margin-top:1px}
+.dot.ok{background:var(--good-bg);color:var(--good)} .dot.todo{background:var(--surface2);color:var(--muted);border:1px solid var(--line)}
+.alert{display:flex;gap:10px;align-items:flex-start;padding:9px 12px;border-radius:8px;font-size:14px}
+.alert.warn{background:var(--warn-bg)} .alert.bad{background:var(--bad-bg)} .alert.good{background:var(--good-bg)}
+.alert b{white-space:nowrap}
+.meter{height:9px;background:var(--surface2);border-radius:99px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--brand);border-radius:99px}
+.meter.warn i{background:var(--accent)} .meter.bad i{background:var(--bad)}
+.muted{color:var(--muted)} .small{font-size:13px}
+.empty{color:var(--muted);font-style:italic;padding:8px 0}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.card .row{display:flex;justify-content:space-between;gap:10px;font-size:14px;border-bottom:1px dashed var(--line);padding-bottom:5px}
+.card .row:last-of-type{border-bottom:0}
+.card .row b{font-family:var(--f-mono);font-weight:600}
+.card header{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.tip{border-left:3px solid var(--accent);padding:4px 0 4px 12px;color:var(--muted);font-size:14px}
+.tip b{color:var(--ink)}
+.formula{font-family:var(--f-mono);font-size:13.5px;background:var(--surface2);border-radius:7px;padding:8px 10px;overflow-x:auto}
+details.panel summary{cursor:pointer;font-family:var(--f-display);font-weight:700;font-size:1.05rem}
+.canvas{display:grid;gap:10px;grid-template-columns:repeat(10,minmax(0,1fr));grid-template-areas:
+ "par par atv atv pro pro rel rel seg seg" "par par rec rec pro pro can can seg seg" "cus cus cus cus cus rev rev rev rev rev"}
+.cv{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.cv label{font-family:var(--f-display);font-weight:700;font-size:13.5px}
+.cv small{color:var(--muted);font-size:12px;line-height:1.35}
+.cv textarea{flex:1;min-height:92px;background:var(--bg)}
+.cv.pro{background:var(--accent-bg);border-color:transparent}
+.chart svg{width:100%;height:auto;display:block;min-width:460px}
+.chart .grid{stroke:var(--line);stroke-width:1}
+.chart .zero{stroke:var(--muted)}
+.chart .ax{fill:var(--muted);font:11px var(--f-mono)}
+.chart .bar{fill:var(--brand);opacity:.85}
+.chart .ln{stroke:var(--accent);fill:none;stroke-width:2.5}
+.chart .pt{fill:var(--accent);stroke:var(--surface);stroke-width:2}
+.chart .pt.neg{fill:var(--bad)}
+.legend{display:flex;gap:16px;font-size:13px;color:var(--muted);flex-wrap:wrap}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.mission{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}
+.mission:last-child{border-bottom:0}
+.mission p{color:var(--muted);font-size:13.5px}
+.gloss{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.gloss div{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px}
+.gloss b{font-family:var(--f-display);display:block;margin-bottom:2px}
+.gloss p{font-size:13.5px;color:var(--muted)}
+.order{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 14px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.order:last-child{border-bottom:0}
+.order .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.modal{position:fixed;inset:0;z-index:20;background:rgba(10,14,11,.55);display:grid;place-items:center;padding:16px}
+.modal .box{background:var(--surface);border-radius:14px;max-width:760px;width:100%;max-height:calc(100vh - 32px);overflow-y:auto;padding:22px;display:flex;flex-direction:column;gap:14px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.modal .acts{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:30;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:9px;font-size:14px;max-width:calc(100vw - 32px);box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.toast.bad{background:var(--bad);color:#fff}
+.big{font-family:var(--f-mono);font-size:1.6rem;font-weight:600}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+@media (max-width:980px){.grid3{grid-template-columns:1fr 1fr}.canvas{grid-template-columns:1fr 1fr;grid-template-areas:"pro pro" "seg rel" "can rec" "atv par" "cus rev"}}
+@media (max-width:860px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .side{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line);padding-block:10px;padding-inline:16px;overflow:visible}
+  .brand{padding:0 0 8px}
+  .nav{flex-direction:row;overflow-x:auto;gap:4px;padding-bottom:4px}
+  .nav .grp{display:none}
+  .credit,.firm{display:none}
+  .foot{padding-inline:16px}
+  .nav a{white-space:nowrap;padding:6px 10px;font-size:14px}
+  .top{padding-inline:16px}
+  main#view{padding-inline:16px}
+  .grid2,.grid3{grid-template-columns:minmax(0,1fr)}
+  .canvas{grid-template-columns:minmax(0,1fr);grid-template-areas:"pro" "seg" "rel" "can" "rec" "atv" "par" "cus" "rev"}
+  .chips{margin-left:0}
+}
+@media (prefers-reduced-motion:no-preference){.btn,.nav a{transition:background .15s}}
+</style>
+
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><div class="logo">BB</div><div><b>Empreende BB</b><small>ERP escolar de empreendedorismo</small></div></div>
+    <div class="firm"><span>Empresa da equipe</span><b id="brandName">Doce Cerrado</b></div>
+    <nav class="nav" id="nav"></nav>
+    <div class="credit"><span><b>Escola Deputado Renê Barbour</b><br>Barra do Bugres – MT</span><span>Coordenação: Prof. Dr. Ramão Humberto Martins Manvailer · UNEMAT</span></div>
+  </aside>
+  <div>
+    <header class="top">
+      <div class="when" id="when"></div>
+      <div class="chips" id="chips"></div>
+      <button class="btn acc" data-act="preFechar" type="button">Fechar o mês</button>
+    </header>
+    <main id="view"></main>
+    <footer class="foot"><span><b>Empreende BB</b> · Escola Deputado Renê Barbour · Barra do Bugres – MT</span><span>Coordenação: Prof. Dr. Ramão Humberto Martins Manvailer · UNEMAT</span></footer>
+  </div>
+</div>
+<div class="modal" id="modal" hidden></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* ====================== utilidades ====================== */
+const $=s=>document.querySelector(s);
+const brl=v=>(v<-0.004?'−':'')+'R$ '+Math.abs(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const num=(v,d)=>{if(d===undefined)d=(Math.abs(v%1)>0.0001)?2:0;return Number(v).toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d})};
+const pct=v=>(isFinite(v)?(v*100).toLocaleString('pt-BR',{maximumFractionDigits:1}):'–')+'%';
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const r2=v=>Math.round(v*100)/100;
+const r4=v=>Math.round(v*1e4)/1e4;
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const uid=()=>Math.random().toString(36).slice(2,8);
+const MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const mesNome=r=>MESES[(r-1)%12];
+const SAZ=[0.9,0.95,1.0,1.08,1.12,1.0,0.95,1.0,1.0,1.08,1.05,1.3];
+const SAZ_MOTIVO=['volta às aulas','','','Páscoa','Dia das Mães','festas juninas','férias','Dia dos Pais','','Dia das Crianças','','Natal e fim de ano'];
+const IMPOSTO=0.06, ENCARGOS=0.30, JUROS=0.025, TARIFA_CHEQUE=0.08, PRAZO_ACRESC=0.03, HORAS_SOCIOS=80;
+const FIXOS=[{cat:'Aluguel',desc:'Aluguel da cozinha compartilhada',valor:600},{cat:'Utilidades',desc:'Gás, energia e internet',valor:350}];
+const CARGOS={
+  producao:{nome:'Auxiliar de produção',salario:1600,efeito:'+160 horas de produção por mês'},
+  vendas:{nome:'Vendedor(a)',salario:1600,efeito:'+15% na procura de todos os produtos'}
+};
+
+const INSUMOS0=[
+  {id:'lc',nome:'Leite condensado',un:'lata',preco:6.5,forn:'f1'},
+  {id:'choc',nome:'Chocolate em pó 50%',un:'kg',preco:40,forn:'f1'},
+  {id:'acu',nome:'Açúcar',un:'kg',preco:5,forn:'f1'},
+  {id:'far',nome:'Farinha de trigo',un:'kg',preco:5,forn:'f1'},
+  {id:'peq',nome:'Polpa de pequi',un:'kg',preco:12,forn:'f3'},
+  {id:'form',nome:'Forminha + saquinho',un:'un',preco:0.4,forn:'f2'},
+  {id:'pote',nome:'Pote com tampa',un:'un',preco:1.2,forn:'f2'}
+];
+const PRODUTOS0=[
+  {id:'brig',nome:'Brigadeiro gourmet',un:'un',preco:3.5,conc:3.5,base:500,horas:0.04,perecivel:true,ficha:{lc:0.05,choc:0.008,form:1},faixa:[80,200]},
+  {id:'bolo',nome:'Bolo de pote',un:'un',preco:12,conc:12,base:180,horas:0.15,perecivel:true,ficha:{lc:0.25,choc:0.03,far:0.05,acu:0.05,pote:1},faixa:[20,50]},
+  {id:'gel',nome:'Geleia de pequi 250 g',un:'pote',preco:18,conc:18,base:70,horas:0.25,perecivel:false,ficha:{peq:0.3,acu:0.2,pote:1},faixa:[10,25]}
+];
+const FORN0=[
+  {id:'f1',nome:'Distribuidora Boa Safra',fornece:'Leite condensado, chocolate, açúcar, farinha'},
+  {id:'f2',nome:'Embalagens Rio Verde',fornece:'Forminhas, saquinhos e potes'},
+  {id:'f3',nome:'Cooperativa do Pequi',fornece:'Polpa de pequi congelada'}
+];
+const CLI0=[
+  {id:'c1',nome:'Café da Praça',tipo:'Empresa',obs:'Revende no balcão'},
+  {id:'c2',nome:'Cantina da Escola',tipo:'Empresa',obs:'Intervalo das aulas'},
+  {id:'c3',nome:'Buffet Festa Boa',tipo:'Empresa',obs:'Festas e formaturas'},
+  {id:'c4',nome:'Empório Sabores do Cerrado',tipo:'Empresa',obs:'Produtos regionais'}
+];
+const EVENTOS=[
+  {id:'calmo',titulo:'Mês tranquilo',texto:'Nenhuma novidade no mercado. Bom momento para revisar custos e organizar a empresa.',licao:'Meses calmos servem para planejar: revise a ficha técnica, os preços e o caixa.'},
+  {id:'feira',titulo:'Feira cultural na cidade',texto:'Movimento maior nas ruas: a procura por todos os produtos sobe cerca de 25%.',dem:{todos:1.25},licao:'Eventos aumentam a procura. Quem reforça o estoque antes vende mais.'},
+  {id:'cacau',titulo:'Alta do cacau',texto:'O chocolate em pó ficou 20% mais caro nos fornecedores a partir deste mês.',insumo:{choc:1.2},licao:'Quando um insumo encarece, o custo unitário muda. Confira se a margem ainda compensa.'},
+  {id:'pequi',titulo:'Safra do pequi',texto:'Pequi farto: a polpa ficou 25% mais barata e a geleia está em alta (+20% de procura).',insumo:{peq:0.75},dem:{gel:1.2},licao:'Produtos regionais têm safra. Comprar na safra reduz o custo.'},
+  {id:'promo',titulo:'Concorrente em promoção',texto:'A doceria concorrente baixou o brigadeiro em 15% neste mês.',conc:{brig:0.85},licao:'Guerra de preços corrói a margem. Diferencie-se por qualidade e atendimento.'},
+  {id:'influ',titulo:'Elogio nas redes sociais',texto:'Um perfil local elogiou seus doces. A reputação da empresa subiu 8 pontos.',rep:8,licao:'Reputação é patrimônio: cliente satisfeito faz propaganda de graça.'},
+  {id:'chuva',titulo:'Semanas de chuva forte',texto:'Menos gente na rua: a procura deve ficar cerca de 15% menor.',dem:{todos:0.85},licao:'Imprevistos acontecem. Uma reserva de caixa evita sufoco.'},
+  {id:'embal',titulo:'Embalagens mais caras',texto:'Forminhas e potes subiram 10% nos fornecedores.',insumo:{form:1.1,pote:1.1},licao:'Custos pequenos, somados, mudam a margem de contribuição.'},
+  {id:'formatura',titulo:'Temporada de formaturas',texto:'Festas de formatura devem pedir cerca de 120 bolos de pote a mais neste mês.',extra:{bolo:120},licao:'Oportunidade só vira venda se houver capacidade de produção e estoque.'}
+];
+const GLOSSARIO=[
+  ['ERP','Sistema que integra as áreas da empresa (compras, estoque, produção, vendas, finanças, pessoas) num só lugar. Uma ação em um módulo afeta os outros.'],
+  ['Ficha técnica','Lista de insumos e quantidades necessárias para fazer uma unidade de produto. É a base do custo.'],
+  ['Custo unitário','Quanto custa produzir uma unidade: soma dos insumos da ficha técnica.'],
+  ['Markup','Multiplicador aplicado ao custo para chegar ao preço. Markup 3 = preço três vezes o custo.'],
+  ['Margem de contribuição','Preço menos custos variáveis e impostos. É o que sobra de cada venda para pagar os custos fixos e gerar lucro.'],
+  ['Custos fixos','Gastos que existem mesmo sem vender nada: aluguel, salários, internet.'],
+  ['Custos variáveis','Gastos que crescem junto com a produção: insumos, embalagens, impostos sobre a venda.'],
+  ['Ponto de equilíbrio','Faturamento mínimo para não ter prejuízo: custos fixos ÷ margem de contribuição em %.'],
+  ['DRE','Demonstração do Resultado do Exercício. Mostra receitas, custos e despesas do mês e se houve lucro ou prejuízo.'],
+  ['Fluxo de caixa','Entradas e saídas de dinheiro de verdade. Uma venda a prazo dá lucro na DRE, mas o dinheiro só entra depois.'],
+  ['Capital de giro','Dinheiro necessário para comprar insumos e pagar contas enquanto as vendas ainda não viraram caixa.'],
+  ['Balanço patrimonial','Foto da empresa: o que ela tem (ativos), o que deve (passivos) e o que pertence aos sócios (patrimônio líquido).'],
+  ['CPV','Custo dos Produtos Vendidos. Só entra na DRE o custo do que foi vendido, não do que foi comprado.'],
+  ['Ruptura de estoque','Quando falta produto para atender o cliente. A venda vai para o concorrente e a reputação cai.'],
+  ['Planejamento de materiais (MRP)','Calcular quanto comprar a partir da previsão de vendas e da ficha técnica. É o que a coluna “Sugestão” faz em Compras.'],
+  ['Simples Nacional','Regime de impostos para pequenas empresas, com uma alíquota única sobre o faturamento. Aqui usamos 6%.'],
+  ['Modelo de negócio (Canvas)','Quadro com 9 blocos que descreve como a empresa cria, entrega e captura valor.'],
+  ['ROI','Retorno sobre o investimento: quanto o patrimônio cresceu em relação ao capital que os sócios colocaram.']
+];
+const MISSOES=[
+  {id:'canvas',t:'Desenhe o modelo de negócio',d:'Preencha pelo menos 6 dos 9 blocos do Canvas em Plano de negócio.',ok:()=>Object.values(S.canvas).filter(v=>v.trim().length>3).length>=6},
+  {id:'compra',t:'Faça a primeira compra',d:'Compre insumos de um fornecedor.',ok:()=>S.stats.compras>0},
+  {id:'prod',t:'Coloque a cozinha para funcionar',d:'Produza o primeiro lote.',ok:()=>S.stats.produzido>0},
+  {id:'preco',t:'Precifique com consciência',d:'Ajuste o preço de algum produto olhando custo, markup e concorrente.',ok:()=>S.stats.preco>0},
+  {id:'b2b',t:'Feche um negócio com empresa',d:'Aceite um pedido de cliente em Vendas e clientes.',ok:()=>S.stats.pedidos>0},
+  {id:'lucro1',t:'Primeiro lucro',d:'Feche um mês com lucro líquido positivo.',ok:()=>S.hist.some(h=>h.lucro>0)},
+  {id:'contrata',t:'Gere um emprego',d:'Contrate o primeiro funcionário.',ok:()=>S.stats.contratou>0},
+  {id:'lucro3',t:'Consistência',d:'Tenha lucro em 3 meses seguidos.',ok:()=>{let c=0,m=0;S.hist.forEach(h=>{c=h.lucro>0?c+1:0;m=Math.max(m,c)});return m>=3}},
+  {id:'rep',t:'Marca querida',d:'Alcance reputação de 70 pontos.',ok:()=>S.reputacao>=70},
+  {id:'caixa',t:'Reserva de segurança',d:'Chegue a R$ 10.000 em caixa.',ok:()=>S.caixa>=10000},
+  {id:'semcheque',t:'Contas em dia',d:'Feche 6 meses sem usar o cheque especial.',ok:()=>S.hist.length>=6&&S.stats.cheque===0},
+  {id:'ano',t:'Um ano de empresa',d:'Feche 12 meses de operação.',ok:()=>S.hist.length>=12}
+];
+const NAV=[
+  ['Visão geral',[['painel','Painel'],['plano','Plano de negócio']]],
+  ['Operação',[['produtos','Produtos e preços'],['compras','Compras e estoque'],['producao','Produção'],['vendas','Vendas e clientes']]],
+  ['Gestão',[['financeiro','Financeiro'],['pessoas','Pessoas'],['mercado','Marketing e mercado'],['relatorios','Relatórios']]],
+  ['Aprender',[['missoes','Missões e glossário']]]
+];
+
+/* ====================== estado ====================== */
+const KEY='erp-jovem-empreendedor-v1';
+let S, view='painel', resetArmado=false;
+function seed(){
+  const s={v:1,
+    empresa:{nome:'Doce Cerrado',slogan:'Doces artesanais feitos por estudantes, com sabor do cerrado',socios:'',turma:'',missao:''},
+    canvas:{segmentos:'',proposta:'',canais:'',relacionamento:'',receitas:'',recursos:'',atividades:'',parcerias:'',custos:''},
+    rodada:1,caixa:5000,capital:5000,divida:0,reputacao:50,marketing:200,
+    insumos:INSUMOS0.map(i=>({...i,estoque:0,cm:0})),
+    produtos:PRODUTOS0.map(p=>({...p,ficha:{...p.ficha},faixa:[...p.faixa],estoque:0,cm:0})),
+    fornecedores:FORN0.map(f=>({...f})),clientes:CLI0.map(c=>({...c})),
+    funcionarios:[],horasUsadas:0,lanc:[],pagar:[],receber:[],vendas:[],hist:[],pedidos:[],
+    mes:novoMes(),evento:EVENTOS[0],stats:{compras:0,produzido:0,preco:0,pedidos:0,contratou:0,cheque:0},ultimo:null};
+  s.lanc.push({r:1,tipo:'e',cat:'Capital dos sócios',desc:'Investimento inicial dos sócios',valor:5000});
+  s.pedidos=gerarPedidos(s);
+  return s;
+}
+function novoMes(){return {receita:0,cpv:0,rescisao:0,comprou:false,produziu:false,revisou:false}}
+function load(){try{const t=localStorage.getItem(KEY);if(t){const o=JSON.parse(t);if(o&&o.v===1){S=o;return}}}catch(e){}S=seed()}
+function save(){S.salvoEm=Date.now();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}agendarNuvem()}
+/* ---------- salvamento na nuvem (ERP publicado) ---------- */
+const NUV={db:null,ref:null,ok:false,estado:'local',busy:false,pend:false,t:null,owner:false,turma:null,carregando:false};
+const temClaude=()=>!!(window.claude&&typeof window.claude.use==='function');
+async function iniciarNuvem(){
+  if(!temClaude()){statusSalvar();return}
+  NUV.estado='conectando';statusSalvar();
+  try{
+    const [db,user]=await Promise.all([claude.use('db'),claude.use('user')]);
+    const uid=db&&user?await user.id():null;
+    if(!db||!uid){NUV.estado='local';statusSalvar();return}
+    NUV.db=db;NUV.ref=db.doc('empresas/'+uid);
+    try{NUV.owner=!!(await user.isOwner())}catch(e){NUV.owner=false}
+    const snap=await NUV.ref.get();
+    const nuvem=snap.exists?(snap.data()||{}).estado:null;
+    NUV.ok=true;
+    if(nuvem&&nuvem.v===1&&(nuvem.salvoEm||0)>(S.salvoEm||0)){
+      S=JSON.parse(JSON.stringify(nuvem));try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
+      NUV.estado='nuvem';render();toast(`Empresa ${S.empresa.nome} carregada. Continue de onde parou: mês ${S.rodada}.`);
+    }else if(!nuvem||(S.salvoEm||0)>(nuvem.salvoEm||0)){render();await gravarNuvem()}
+    else{NUV.estado='nuvem';render()}
+  }catch(e){NUV.estado='local';statusSalvar()}
+}
+function agendarNuvem(){if(!NUV.ok)return;clearTimeout(NUV.t);NUV.estado='pendente';statusSalvar();NUV.t=setTimeout(gravarNuvem,1200)}
+async function gravarNuvem(){
+  clearTimeout(NUV.t);
+  if(!NUV.ok)return;
+  if(NUV.busy){NUV.pend=true;return}
+  NUV.busy=true;NUV.estado='salvando';statusSalvar();
+  try{
+    await NUV.ref.set({nome:S.empresa.nome||'',turma:S.empresa.turma||'',socios:S.empresa.socios||'',rodada:S.rodada,caixa:S.caixa,
+      lucroAcum:r2(S.hist.reduce((a,x)=>a+x.lucro,0)),reputacao:S.reputacao,patrimonio:r2(patrimonio()),
+      missoes:MISSOES.filter(m=>m.ok()).length,salvoEm:S.salvoEm||Date.now(),estado:JSON.parse(JSON.stringify(S))});
+    NUV.estado='nuvem';
+  }catch(e){
+    const c=e&&e.code;
+    if(c==='invalid_argument'||c==='not_granted'||c==='revoked'||c==='capability_disabled'){NUV.ok=false;NUV.estado='semPermissao'}
+    else if(c==='quota_exceeded')NUV.estado='cheio';
+    else NUV.estado='erro';
+  }
+  NUV.busy=false;statusSalvar();
+  if(NUV.pend){NUV.pend=false;gravarNuvem()}
+}
+const SALVO={
+  local:['','Salvo neste navegador'],conectando:['busy','Conectando à nuvem…'],pendente:['busy','Alterações a salvar…'],
+  salvando:['busy','Salvando na nuvem…'],nuvem:['ok','Salvo na nuvem'],erro:['warn','Sem conexão: salvo neste navegador'],
+  semPermissao:['warn','Salvo só neste navegador'],cheio:['warn','Nuvem cheia: salvo neste navegador']
+};
+function statusSalvar(){const e=document.getElementById('salvo');if(!e)return;const [k,t]=SALVO[NUV.estado]||SALVO.local;e.className='chip save '+k;e.innerHTML=`<i></i>${t}`;
+  e.title=NUV.estado==='semPermissao'?'Sua conta não tem permissão para salvar na nuvem. Use “Baixar arquivo da empresa” em Plano de negócio.':''}
+async function carregarTurma(){
+  if(!NUV.db||!NUV.owner)return;NUV.carregando=true;render();
+  try{const q=await NUV.db.collection('empresas').limit(500).get();NUV.turma=q.docs.map(d=>({id:d.id,...(d.data()||{})}))}
+  catch(e){NUV.turma=[];toast('Não foi possível carregar as equipes agora. Tente de novo em instantes.',true)}
+  NUV.carregando=false;render();
+}
+
+/* ====================== cálculos ====================== */
+const ins=id=>S.insumos.find(i=>i.id===id);
+const prod=id=>S.produtos.find(p=>p.id===id);
+const nCargo=c=>S.funcionarios.filter(f=>f.cargo===c).length;
+const horasTot=()=>HORAS_SOCIOS+160*nCargo('producao');
+const horasLivres=()=>Math.max(0,r2(horasTot()-S.horasUsadas));
+const folha=()=>S.funcionarios.reduce((a,f)=>a+f.salario*(1+ENCARGOS),0);
+const fixosTot=()=>FIXOS.reduce((a,f)=>a+f.valor,0);
+function custoPadrao(p){return Object.entries(p.ficha).reduce((a,[k,q])=>{const i=ins(k);return a+(i?q*i.preco:0)},0)}
+function custoEstoque(p){return Object.entries(p.ficha).reduce((a,[k,q])=>{const i=ins(k);return a+(i?q*(i.cm||i.preco):0)},0)}
+function maxProduzivel(p){
+  let m=p.horas>0?Math.floor(horasLivres()/p.horas+1e-9):99999;
+  for(const [k,q] of Object.entries(p.ficha)){const i=ins(k);if(!i||q<=0)continue;m=Math.min(m,Math.floor(i.estoque/q+1e-9))}
+  return Math.max(0,m);
+}
+function demanda(p,ruido){
+  const ev=S.evento||{};
+  const ref=p.conc*((ev.conc&&ev.conc[p.id])||1);
+  const fP=clamp(Math.pow(ref/Math.max(p.preco,0.01),1.6),0.05,2.5);
+  const fM=1+0.4*(1-Math.exp(-S.marketing/700));
+  const fV=1+0.15*nCargo('vendas');
+  const fR=0.75+0.5*S.reputacao/100;
+  const fS=SAZ[(S.rodada-1)%12];
+  const fE=ev.dem?(ev.dem[p.id]??ev.dem.todos??1):1;
+  const g=1+0.015*(S.rodada-1);
+  let d=p.base*fP*fM*fV*fR*fS*fE*g+((ev.extra&&ev.extra[p.id])||0);
+  if(ruido)d*=0.92+Math.random()*0.16;
+  return Math.max(0,Math.round(d));
+}
+function fatores(p){
+  const ev=S.evento||{};const ref=p.conc*((ev.conc&&ev.conc[p.id])||1);
+  return {ref,preco:clamp(Math.pow(ref/Math.max(p.preco,0.01),1.6),0.05,2.5),mkt:1+0.4*(1-Math.exp(-S.marketing/700)),vend:1+0.15*nCargo('vendas'),rep:0.75+0.5*S.reputacao/100,saz:SAZ[(S.rodada-1)%12],ev:ev.dem?(ev.dem[p.id]??ev.dem.todos??1):1};
+}
+const valorEstoque=()=>S.insumos.reduce((a,i)=>a+i.estoque*(i.cm||i.preco),0)+S.produtos.reduce((a,p)=>a+p.estoque*p.cm,0);
+const totReceber=()=>S.receber.reduce((a,x)=>a+x.valor,0);
+const totPagar=()=>S.pagar.reduce((a,x)=>a+x.valor,0);
+const patrimonio=()=>S.caixa+valorEstoque()+totReceber()-totPagar()-S.divida;
+function mov(tipo,cat,desc,valor){valor=r2(valor);S.caixa=r2(S.caixa+(tipo==='e'?valor:-valor));S.lanc.push({r:S.rodada,tipo,cat,desc,valor})}
+function gerarPedidos(s){
+  const emp=s.clientes.filter(c=>c.tipo==='Empresa');if(!emp.length)return[];
+  const n=1+Math.floor(Math.random()*2),out=[];
+  for(let k=0;k<n;k++){
+    const p=pick(s.produtos),f=p.faixa||[10,30];
+    const qtd=Math.max(5,Math.round((f[0]+Math.random()*(f[1]-f[0]))/5)*5);
+    const preco=Math.max(0.05,Math.round(p.conc*(0.8+Math.random()*0.18)*20)/20);
+    out.push({id:uid(),cliente:pick(emp).nome,pid:p.id,qtd,preco,forma:Math.random()<0.55?'prazo':'vista'});
+  }
+  return out;
+}
+
+/* ====================== ações ====================== */
+function toast(msg,bad){const t=$('#toast');t.textContent=msg;t.className='toast'+(bad?' bad':'');t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,3600)}
+function val(id){const e=document.getElementById(id);return e?e.value:''}
+function nval(id){return parseFloat(String(val(id)).replace(',','.'))}
+
+function registrarVenda(p,q,preco,cliente,forma){
+  const total=r2(q*preco);
+  p.estoque=r4(p.estoque-q);
+  S.mes.receita+=total;S.mes.cpv+=q*p.cm;
+  S.vendas.push({r:S.rodada,cliente,produto:p.nome,qtd:q,preco,total,forma});
+  if(forma==='prazo')S.receber.push({desc:`${cliente}: ${num(q)} ${p.un} de ${p.nome}`,valor:total,vence:S.rodada+1});
+  else mov('e','Vendas',`${cliente}: ${num(q)} ${p.un} de ${p.nome}`,total);
+}
+
+const A={
+  comprar(b){
+    const i=ins(b.dataset.id),q=nval('q_'+i.id),forma=val('f_'+i.id);
+    if(!(q>0))return toast('Informe uma quantidade maior que zero.',true);
+    const unit=r4(i.preco*(forma==='prazo'?1+PRAZO_ACRESC:1)),total=r2(unit*q);
+    if(forma==='vista'&&total>S.caixa+0.001)return toast(`Caixa insuficiente: a compra custa ${brl(total)} e há ${brl(S.caixa)}. Compre a prazo ou pegue um empréstimo.`,true);
+    i.cm=r4((i.estoque*(i.cm||unit)+q*unit)/(i.estoque+q));i.estoque=r4(i.estoque+q);
+    const forn=(S.fornecedores.find(f=>f.id===i.forn)||{}).nome||'Fornecedor';
+    if(forma==='prazo')S.pagar.push({desc:`${forn}: ${num(q)} ${i.un} de ${i.nome}`,valor:total,vence:S.rodada+1});
+    else mov('s','Compras',`${forn}: ${num(q)} ${i.un} de ${i.nome}`,total);
+    S.stats.compras++;S.mes.comprou=true;save();render();toast(`Compra registrada: ${num(q)} ${i.un} de ${i.nome} por ${brl(total)}${forma==='prazo'?' (paga no fim do próximo mês)':''}.`);
+  },
+  comprarSugestao(){
+    const sug=sugestoes();let total=0,itens=0;
+    for(const i of S.insumos){const q=sug[i.id]||0;if(q>0){total+=q*i.preco;itens++}}
+    if(!itens)return toast('O estoque atual já cobre a previsão de vendas deste mês.');
+    if(total>S.caixa)return toast(`Comprar tudo à vista custaria ${brl(total)}, mais que o caixa (${brl(S.caixa)}). Compre item por item, a prazo ou pegue um empréstimo.`,true);
+    for(const i of S.insumos){const q=sug[i.id]||0;if(q<=0)continue;i.cm=r4((i.estoque*(i.cm||i.preco)+q*i.preco)/(i.estoque+q));i.estoque=r4(i.estoque+q);mov('s','Compras',`Compra planejada: ${num(q)} ${i.un} de ${i.nome}`,q*i.preco)}
+    S.stats.compras++;S.mes.comprou=true;save();render();toast(`Compra planejada concluída: ${itens} insumos por ${brl(total)}.`);
+  },
+  produzir(b){
+    const p=prod(b.dataset.id),q=Math.floor(nval('p_'+p.id));
+    if(!(q>0))return toast('Informe quantas unidades produzir.',true);
+    const mx=maxProduzivel(p);
+    if(q>mx){
+      if(p.horas*q>horasLivres())return toast(`Faltam horas de produção: ${num(q)} un. precisam de ${num(r2(p.horas*q))} h e restam ${num(horasLivres())} h. Contrate um auxiliar em Pessoas.`,true);
+      const falta=Object.entries(p.ficha).filter(([k,qq])=>ins(k).estoque<qq*q).map(([k])=>ins(k).nome);
+      return toast(`Insumos insuficientes: ${falta.join(', ')}. Compre em Compras e estoque.`,true);
+    }
+    let custo=0;
+    for(const [k,qq] of Object.entries(p.ficha)){const i=ins(k);const need=qq*q;custo+=need*(i.cm||i.preco);i.estoque=r4(i.estoque-need);if(i.estoque<1e-6)i.estoque=0}
+    p.cm=r4((p.estoque*p.cm+custo)/(p.estoque+q));p.estoque+=q;S.horasUsadas=r2(S.horasUsadas+p.horas*q);
+    S.stats.produzido+=q;S.mes.produziu=true;save();render();toast(`${num(q)} ${p.un} de ${p.nome} produzidos. Custo do lote: ${brl(custo)}.`);
+  },
+  aceitar(b){
+    const o=S.pedidos.find(x=>x.id===b.dataset.id),p=prod(o.pid);
+    if(p.estoque<o.qtd)return toast(`Estoque insuficiente: o pedido pede ${num(o.qtd)} e há ${num(p.estoque)} de ${p.nome}. Produza antes de aceitar.`,true);
+    registrarVenda(p,o.qtd,o.preco,o.cliente,o.forma);S.pedidos=S.pedidos.filter(x=>x!==o);S.stats.pedidos++;save();render();toast(`Pedido de ${o.cliente} entregue: ${brl(o.qtd*o.preco)}.`);
+  },
+  recusar(b){S.pedidos=S.pedidos.filter(x=>x.id!==b.dataset.id);save();render();toast('Pedido recusado.')},
+  vendaDireta(){
+    const p=prod(val('vd_p')),q=Math.floor(nval('vd_q')),preco=nval('vd_v'),cli=val('vd_c'),forma=val('vd_f');
+    if(!(q>0)||!(preco>0))return toast('Informe quantidade e preço.',true);
+    if(p.estoque<q)return toast(`Só há ${num(p.estoque)} ${p.un} de ${p.nome} em estoque.`,true);
+    registrarVenda(p,q,preco,cli,forma);save();render();toast(`Venda registrada: ${brl(q*preco)}.`);
+  },
+  novoCliente(){const n=val('nc_n').trim();if(!n)return toast('Informe o nome do cliente.',true);S.clientes.push({id:uid(),nome:n,tipo:val('nc_t'),obs:val('nc_o').trim()});save();render();toast('Cliente cadastrado.')},
+  delCliente(b){S.clientes=S.clientes.filter(c=>c.id!==b.dataset.id);save();render()},
+  novoForn(){const n=val('nf_n').trim();if(!n)return toast('Informe o nome do fornecedor.',true);S.fornecedores.push({id:uid(),nome:n,fornece:val('nf_o').trim()});save();render();toast('Fornecedor cadastrado.')},
+  novoInsumo(){
+    const n=val('ni_n').trim(),u=val('ni_u').trim()||'un',pr=nval('ni_p');
+    if(!n||!(pr>0))return toast('Informe nome e preço do insumo.',true);
+    S.insumos.push({id:uid(),nome:n,un:u,preco:pr,forn:val('ni_f'),estoque:0,cm:0});save();render();toast('Insumo cadastrado. Ele já aparece na ficha técnica de novos produtos.');
+  },
+  novoProduto(){
+    const n=val('np_n').trim(),pr=nval('np_p'),cc=nval('np_c'),h=nval('np_h')/60,base=Math.floor(nval('np_b'));
+    if(!n||!(pr>0)||!(cc>0)||!(h>0)||!(base>0))return toast('Preencha nome, preço, preço do concorrente, minutos por unidade e procura estimada.',true);
+    const ficha={};S.insumos.forEach(i=>{const q=nval('npf_'+i.id);if(q>0)ficha[i.id]=q});
+    if(!Object.keys(ficha).length)return toast('A ficha técnica precisa de pelo menos um insumo.',true);
+    S.produtos.push({id:uid(),nome:n,un:val('np_u').trim()||'un',preco:pr,conc:cc,base,horas:r4(h),perecivel:val('np_per')==='sim',ficha,faixa:[Math.max(5,Math.round(base*0.15)),Math.max(10,Math.round(base*0.35))],estoque:0,cm:0});
+    save();render();toast(`${n} entrou no catálogo. A procura real será revelada ao fechar o mês.`);
+  },
+  contratar(b){const c=b.dataset.c;if(S.funcionarios.length>=8)return toast('Limite de 8 funcionários nesta simulação.',true);
+    S.funcionarios.push({id:uid(),nome:val('fn_'+c).trim()||`${CARGOS[c].nome} ${nCargo(c)+1}`,cargo:c,salario:CARGOS[c].salario,desde:S.rodada});S.stats.contratou++;save();render();toast(`Contratação feita. Custo mensal com encargos: ${brl(CARGOS[c].salario*(1+ENCARGOS))}.`)},
+  demitir(b){const f=S.funcionarios.find(x=>x.id===b.dataset.id);
+    if(f.cargo==='producao'&&S.horasUsadas>horasTot()-160)return toast('As horas desse funcionário já foram usadas na produção deste mês. Demita no próximo mês.',true);
+    mov('s','Rescisões',`Rescisão de ${f.nome}`,f.salario);S.mes.rescisao+=f.salario;S.funcionarios=S.funcionarios.filter(x=>x!==f);save();render();toast(`Desligamento registrado. Custo de rescisão: ${brl(f.salario)}.`)},
+  emprestar(){const v=nval('emp_v');if(!(v>0))return toast('Informe o valor.',true);if(S.divida+v>15000)return toast('O banco limita a dívida total a R$ 15.000 para esta empresa.',true);
+    S.divida=r2(S.divida+v);mov('e','Empréstimos','Empréstimo bancário',v);save();render();toast(`Empréstimo de ${brl(v)} creditado. Juros de ${pct(JUROS)} ao mês sobre a dívida.`)},
+  amortizar(){let v=nval('amo_v');if(!(v>0))return toast('Informe o valor.',true);v=Math.min(v,S.divida);if(v>S.caixa)return toast('Caixa insuficiente para amortizar esse valor.',true);
+    S.divida=r2(S.divida-v);mov('s','Empréstimos','Amortização do empréstimo',v);save();render();toast(`Dívida reduzida em ${brl(v)}.`)},
+  preFechar(){abrirPreFechar()},
+  fechar(){fecharMes()},
+  fecharModal(){$('#modal').hidden=true;$('#modal').innerHTML='';render()},
+  async baixar(){
+    const slug=(S.empresa.nome||'empresa').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Za-z0-9]+/g,'-').replace(/^-|-$/g,'').toLowerCase()||'empresa';
+    const nome=`${slug}-mes-${S.rodada}.json`,data=JSON.stringify(S);
+    if(temClaude()){
+      let d=null;try{d=await claude.use('downloads')}catch(e){}
+      if(!d)return toast('Este navegador não permite baixar arquivos aqui. O salvamento automático continua valendo.',true);
+      try{await d.save({filename:nome,data});toast('Arquivo da empresa salvo.')}catch(e){if(e&&e.code!=='declined')toast('Não foi possível salvar o arquivo agora.',true)}
+      return;
+    }
+    try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:'application/json'}));a.download=nome;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);toast(`Arquivo ${nome} baixado. Guarde no pendrive ou no Drive.`)}
+    catch(e){toast('Não foi possível baixar o arquivo neste navegador.',true)}
+  },
+  abrirArquivo(){const i=$('#arq');if(i)i.click()},
+  turma(){carregarTurma()},
+  reset(b){if(!resetArmado){resetArmado=true;b.textContent='Confirmar: apagar tudo';b.classList.add('danger');setTimeout(()=>{resetArmado=false;render()},5000);return}
+    resetArmado=false;S=seed();save();view='painel';location.hash='painel';render();toast('Nova empresa criada. Bom começo!')},
+  ir(b){go(b.dataset.v)}
+};
+
+function sugestoes(){
+  const need={};
+  S.produtos.forEach(p=>{const falta=Math.max(0,Math.ceil(demanda(p,false)*1.05)-p.estoque);for(const [k,q] of Object.entries(p.ficha))need[k]=(need[k]||0)+falta*q});
+  const out={};S.insumos.forEach(i=>{const q=Math.max(0,(need[i.id]||0)-i.estoque);out[i.id]=q>0?(i.un==='un'||i.un==='lata'||i.un==='pote'?Math.ceil(q):Math.ceil(q*10)/10):0});
+  return out;
+}
+
+/* ====================== fechar o mês ====================== */
+function abrirPreFechar(){
+  const avisos=[];
+  S.produtos.forEach(p=>{const d=demanda(p,false);if(p.estoque<d*0.9)avisos.push(`<div class="alert warn"><b>${esc(p.nome)}</b><span>estoque de ${num(p.estoque)} para uma procura prevista de ~${num(d)}.</span></div>`)});
+  const venc=S.pagar.filter(x=>x.vence<=S.rodada).reduce((a,x)=>a+x.valor,0);
+  const saidas=folha()+fixosTot()+S.marketing+S.divida*JUROS+venc;
+  if(saidas>S.caixa)avisos.push(`<div class="alert bad"><b>Caixa</b><span>As saídas previstas (${brl(saidas)}) superam o caixa atual (${brl(S.caixa)}). Sem vendas suficientes, o banco cobrirá a diferença com cheque especial (tarifa de 8%).</span></div>`);
+  if(S.pedidos.length)avisos.push(`<div class="alert warn"><b>Pedidos</b><span>${S.pedidos.length} pedido(s) de clientes ainda sem resposta vão expirar.</span></div>`);
+  $('#modal').innerHTML=`<div class="box" role="dialog" aria-modal="true" aria-labelledby="mt">
+    <p class="eyebrow">Mês ${S.rodada} · ${mesNome(S.rodada)}</p><h2 id="mt">Fechar o mês?</h2>
+    <p class="muted">O mercado vai comprar o que estiver no estoque, as contas do mês serão pagas e a DRE será gerada. Depois disso não dá para voltar.</p>
+    ${avisos.length?`<div class="list" style="display:flex;flex-direction:column;gap:8px">${avisos.join('')}</div>`:'<div class="alert good"><b>Tudo pronto</b><span>Estoque cobre a previsão e o caixa aguenta as saídas.</span></div>'}
+    <div class="formula">Saídas previstas: salários ${brl(folha())} · fixos ${brl(fixosTot())} · marketing ${brl(S.marketing)} · juros ${brl(S.divida*JUROS)} · contas a pagar ${brl(venc)} · impostos 6% sobre as vendas</div>
+    <div class="acts"><button class="btn" data-act="fecharModal" type="button">Voltar e ajustar</button><button class="btn acc" data-act="fechar" type="button">Fechar o mês</button></div></div>`;
+  $('#modal').hidden=false;
+}
+function fecharMes(){
+  const r=S.rodada,ev=S.evento,res={r,mes:mesNome(r),evento:ev.titulo,prods:[],licoes:[]};
+  let recM=0,cpvM=0,perdasV=0,demT=0,vendT=0;
+  S.produtos.forEach(p=>{
+    const dem=demanda(p,true),vend=Math.min(dem,Math.floor(p.estoque));
+    const rec=r2(vend*p.preco);recM+=rec;cpvM+=vend*p.cm;p.estoque=r4(p.estoque-vend);demT+=dem;vendT+=vend;
+    if(vend>0)S.vendas.push({r,cliente:'Consumidores (varejo)',produto:p.nome,qtd:vend,preco:p.preco,total:rec,forma:'vista'});
+    let perda=0;if(p.perecivel&&p.estoque>0){perda=Math.ceil(p.estoque*0.2);perdasV+=perda*p.cm;p.estoque-=perda}
+    res.prods.push({nome:p.nome,un:p.un,dem,vend,falta:dem-vend,sobra:p.estoque,perda,preco:p.preco,conc:p.conc,custo:custoPadrao(p)});
+  });
+  if(recM>0)mov('e','Vendas','Vendas no varejo do mês',recM);
+  S.receber.filter(x=>x.vence<=r).forEach(x=>mov('e','Recebimentos',x.desc,x.valor));S.receber=S.receber.filter(x=>x.vence>r);
+  S.pagar.filter(x=>x.vence<=r).forEach(x=>mov('s','Fornecedores',x.desc,x.valor));S.pagar=S.pagar.filter(x=>x.vence>r);
+  const receita=r2(recM+S.mes.receita),imposto=r2(receita*IMPOSTO),sal=r2(folha()),fix=fixosTot(),mkt=S.marketing,juros=r2(S.divida*JUROS);
+  if(sal>0)mov('s','Salários','Salários e encargos',sal);
+  FIXOS.forEach(f=>mov('s',f.cat,f.desc,f.valor));
+  if(mkt>0)mov('s','Marketing','Divulgação do mês',mkt);
+  if(juros>0)mov('s','Juros','Juros do empréstimo',juros);
+  if(imposto>0)mov('s','Impostos','Simples Nacional (DAS)',imposto);
+  let tarifa=0;
+  if(S.caixa<0){const gap=-S.caixa;tarifa=r2(gap*TARIFA_CHEQUE);S.divida=r2(S.divida+gap+tarifa);mov('e','Cheque especial','Cobertura automática do banco',gap);S.stats.cheque++;res.cheque=gap}
+  const cpv=r2(cpvM+S.mes.cpv),rliq=r2(receita-imposto),lbruto=r2(rliq-cpv-perdasV),jur=r2(juros+tarifa);
+  const lucro=r2(lbruto-sal-fix-mkt-S.mes.rescisao-jur);
+  const taxa=demT?vendT/demT:1;let dRep=taxa>=0.95?3:taxa>=0.8?0:taxa>=0.6?-3:-6;
+  if(S.produtos.some(p=>p.preco>p.conc*1.35))dRep-=1;
+  S.reputacao=clamp(Math.round(S.reputacao+dRep),0,100);
+  const dre={r,mes:mesNome(r),receita,imposto,rliq,cpv:cpv,perdas:r2(perdasV),lbruto,salarios:sal,fixos:fix,mkt,resc:S.mes.rescisao,juros:jur,lucro,caixa:S.caixa,rep:S.reputacao,evento:ev.titulo,b2b:r2(S.mes.receita)};
+  S.hist.push(dre);res.dre=dre;res.dRep=dRep;res.taxa=taxa;
+  // lições
+  const L=res.licoes;
+  res.prods.forEach(p=>{
+    if(p.falta>0&&p.falta>=p.dem*0.1)L.push(['bad',`Faltaram ${num(p.falta)} ${p.un} de ${p.nome}. Esses clientes compraram do concorrente e a reputação sofreu.`]);
+    if(p.perda>0)L.push(['warn',`${num(p.perda)} ${p.un} de ${p.nome} passaram da validade e viraram perda. Produza perto da procura prevista.`]);
+    if(p.preco>p.conc*1.2)L.push(['warn',`${p.nome} está ${pct(p.preco/p.conc-1)} acima do concorrente. Preço alto reduz a procura.`]);
+    if(p.preco<p.custo*(1+IMPOSTO))L.push(['bad',`${p.nome} está sendo vendido abaixo do custo mais impostos. Cada venda dá prejuízo.`]);
+  });
+  if(res.cheque)L.push(['bad',`O caixa ficou negativo e o banco cobriu ${brl(res.cheque)} com cheque especial, cobrando ${brl(tarifa)} de tarifa. Planeje o fluxo de caixa.`]);
+  if(S.horasUsadas>horasTot()*0.9)L.push(['warn','A produção usou mais de 90% das horas disponíveis. Se a procura crescer, será preciso contratar.']);
+  if(lucro>0)L.push(['good',`Lucro de ${brl(lucro)}: margem líquida de ${pct(receita?lucro/receita:0)}.`]);
+  else L.push(['bad',`Prejuízo de ${brl(lucro)}. Compare a margem de contribuição com os custos fixos em Relatórios.`]);
+  if(S.mes.receita>0&&S.receber.length)L.push(['good','Vendas a prazo entram como receita na DRE agora, mas o dinheiro só chega no fim do próximo mês. Essa é a diferença entre lucro e caixa.']);
+  L.push(['tip',ev.licao]);
+  // próximo mês
+  S.rodada++;S.horasUsadas=0;S.mes=novoMes();
+  const opts=EVENTOS.filter(e=>e.id!==ev.id);const nx=Math.random()<0.25?EVENTOS[0]:pick(opts);S.evento=nx;
+  if(nx.insumo)for(const [k,f] of Object.entries(nx.insumo)){const i=ins(k);if(i)i.preco=r2(i.preco*f)}
+  if(nx.rep)S.reputacao=clamp(S.reputacao+nx.rep,0,100);
+  if(S.lanc.length>600)S.lanc=S.lanc.slice(-600);if(S.vendas.length>400)S.vendas=S.vendas.slice(-400);
+  S.pedidos=gerarPedidos(S);S.ultimo=res;save();
+  mostrarResultado(res);
+}
+function mostrarResultado(res){
+  const d=res.dre;
+  $('#modal').innerHTML=`<div class="box" role="dialog" aria-modal="true" aria-labelledby="mr">
+    <p class="eyebrow">Resultado de ${res.mes} · Mês ${res.r}</p>
+    <h2 id="mr">${d.lucro>=0?'Mês fechado com lucro':'Mês fechado com prejuízo'}</h2>
+    <div class="kpis">
+      <div class="kpi"><span>Receita</span><b>${brl(d.receita)}</b></div>
+      <div class="kpi ${d.lucro>=0?'good':'bad'}"><span>Lucro líquido</span><b>${brl(d.lucro)}</b></div>
+      <div class="kpi"><span>Caixa final</span><b>${brl(d.caixa)}</b></div>
+      <div class="kpi"><span>Reputação</span><b>${d.rep}</b><small>${res.dRep>=0?'+':''}${res.dRep} no mês</small></div>
+    </div>
+    <div class="tbl"><table><thead><tr><th>Produto</th><th class="n">Procura</th><th class="n">Vendido</th><th class="n">Faltou</th><th class="n">Perdido</th><th class="n">Sobrou</th></tr></thead><tbody>
+    ${res.prods.map(p=>`<tr><td>${esc(p.nome)}</td><td class="n">${num(p.dem)}</td><td class="n">${num(p.vend)}</td><td class="n">${p.falta?`<span class="pill bad">${num(p.falta)}</span>`:'0'}</td><td class="n">${p.perda?`<span class="pill warn">${num(p.perda)}</span>`:'0'}</td><td class="n">${num(p.sobra)}</td></tr>`).join('')}
+    </tbody></table></div>
+    <h3>O que este mês ensinou</h3>
+    <div style="display:flex;flex-direction:column;gap:8px">${res.licoes.map(([k,t])=>k==='tip'?`<p class="tip"><b>Lição do evento:</b> ${esc(t)}</p>`:`<div class="alert ${k}"><span>${esc(t)}</span></div>`).join('')}</div>
+    <div class="news"><span class="tag">Notícia para ${mesNome(S.rodada)}</span><h3>${esc(S.evento.titulo)}</h3><p>${esc(S.evento.texto)}</p></div>
+    <div class="acts"><button class="btn" data-act="ir" data-v="relatorios" type="button">Ver DRE completa</button><button class="btn pri" data-act="fecharModal" type="button">Começar ${mesNome(S.rodada)}</button></div></div>`;
+  $('#modal').hidden=false;
+}
+
+/* ====================== gráfico ====================== */
+function niceStep(raw){const p=Math.pow(10,Math.floor(Math.log10(raw)));const n=raw/p;return (n<=1?1:n<=2?2:n<=5?5:10)*p}
+const kfmt=v=>Math.abs(v)>=1000?(v/1000).toLocaleString('pt-BR',{maximumFractionDigits:1})+' mil':num(Math.round(v),0);
+function chart(h){
+  if(!h.length)return '<p class="empty">O gráfico aparece depois que o primeiro mês for fechado.</p>';
+  const d=h.slice(-12),W=680,H=240,L=62,R=14,T=14,B=30;
+  const hi=Math.max(100,...d.map(x=>x.receita),...d.map(x=>x.lucro)),lo=Math.min(0,...d.map(x=>x.lucro));
+  const st=niceStep((hi-lo)/4),top=Math.ceil(hi/st)*st,bot=Math.floor(lo/st)*st;
+  const y=v=>T+(top-v)/(top-bot)*(H-T-B),bw=(W-L-R)/d.length;
+  let g='';for(let v=bot;v<=top+st/1000;v+=st){g+=`<line x1="${L}" x2="${W-R}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" class="grid${Math.abs(v)<1e-6?' zero':''}"/><text x="${L-8}" y="${(y(v)+4).toFixed(1)}" text-anchor="end" class="ax">${kfmt(v)}</text>`}
+  const bars=d.map((x,i)=>{const yy=y(Math.max(0,x.receita));return `<rect class="bar" x="${(L+i*bw+bw*0.22).toFixed(1)}" y="${yy.toFixed(1)}" width="${(bw*0.56).toFixed(1)}" height="${Math.max(0,y(0)-yy).toFixed(1)}" rx="3"><title>${x.mes}: receita ${brl(x.receita)}</title></rect><text class="ax" x="${(L+i*bw+bw/2).toFixed(1)}" y="${H-10}" text-anchor="middle">M${x.r}</text>`}).join('');
+  const pts=d.map((x,i)=>[L+i*bw+bw/2,y(x.lucro),x]);
+  const line=pts.length>1?`<polyline class="ln" points="${pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')}"/>`:'';
+  const dots=pts.map(p=>`<circle class="pt${p[2].lucro<0?' neg':''}" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="5"><title>${p[2].mes}: lucro ${brl(p[2].lucro)}</title></circle>`).join('');
+  return `<div class="legend"><span><i style="background:var(--brand)"></i>Receita</span><span><i style="background:var(--accent);border-radius:50%"></i>Lucro líquido</span></div>
+  <div class="chart" style="overflow-x:auto"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Receita e lucro por mês">${g}${bars}${line}${dots}</svg></div>`;
+}
+
+/* ====================== telas ====================== */
+const kpi=(l,v,s,c)=>`<div class="kpi ${c||''}"><span>${l}</span><b>${v}</b>${s?`<small>${s}</small>`:''}</div>`;
+const meter=(v,max,cls)=>`<div class="meter ${cls||''}"><i style="width:${clamp(max?v/max*100:0,0,100).toFixed(1)}%"></i></div>`;
+const head=(eb,t,l)=>`<section class="head"><p class="eyebrow">${eb}</p><h1>${t}</h1>${l?`<p class="lead">${l}</p>`:''}</section>`;
+
+function rotina(){
+  const st=[
+    ['Leia a notícia do mês',true,'painel'],
+    ['Compre os insumos',S.mes.comprou,'compras'],
+    ['Produza os lotes',S.mes.produziu,'producao'],
+    ['Revise preços e marketing',S.mes.revisou,'mercado'],
+    ['Responda aos pedidos de clientes',S.pedidos.length===0,'vendas'],
+    ['Feche o mês e leia o resultado',false,null]
+  ];
+  return `<ol class="list">${st.map(([t,ok,v],i)=>`<li><span class="dot ${ok?'ok':'todo'}">${ok?'✓':i+1}</span><span style="flex:1">${t}</span>${v&&!ok?`<button class="btn sm ghost" data-act="ir" data-v="${v}" type="button">Abrir</button>`:''}</li>`).join('')}</ol>`;
+}
+function alertas(){
+  const a=[];
+  if(S.caixa<1000)a.push(['bad','Caixa baixo',`Restam ${brl(S.caixa)}. As saídas fixas do mês somam ${brl(folha()+fixosTot()+S.marketing)}.`]);
+  S.produtos.forEach(p=>{const d=demanda(p,false);if(p.estoque<d*0.5)a.push(['warn',p.nome,`${num(p.estoque)} em estoque para procura prevista de ~${num(d)}.`])});
+  const usados=new Set(S.produtos.flatMap(p=>Object.keys(p.ficha)));
+  const zerados=S.insumos.filter(i=>usados.has(i.id)&&i.estoque<=0);if(zerados.length)a.push(['warn','Insumos zerados',zerados.map(i=>i.nome).join(', ')+'.']);
+  const venc=S.pagar.filter(x=>x.vence<=S.rodada).reduce((s,x)=>s+x.valor,0);if(venc>0)a.push(['warn','Contas a pagar',`${brl(venc)} vencem no fechamento deste mês.`]);
+  if(S.pedidos.length)a.push(['warn','Pedidos de clientes',`${S.pedidos.length} aguardando resposta.`]);
+  if(S.reputacao<40)a.push(['bad','Reputação',`Está em ${S.reputacao}. Evite faltas de produto.`]);
+  if(!a.length)return '<div class="alert good"><b>Tudo em ordem</b><span>Nenhum ponto de atenção agora.</span></div>';
+  return a.map(([k,b,t])=>`<div class="alert ${k}"><b>${esc(b)}</b><span>${esc(t)}</span></div>`).join('');
+}
+
+function vPainel(){
+  const h=S.hist,last=h[h.length-1],ev=S.evento,acum=h.reduce((a,x)=>a+x.lucro,0);
+  return head(`Empreende BB · Mês ${S.rodada} · ${mesNome(S.rodada)}`,esc(S.empresa.nome),esc(S.empresa.slogan)+(S.empresa.turma?` <span class="small">· Turma ${esc(S.empresa.turma)}</span>`:''))+
+  `<div class="news"><span class="tag">Notícia do mês</span><h3>${esc(ev.titulo)}</h3><p>${esc(ev.texto)}</p></div>
+  <div class="kpis">
+   ${kpi('Caixa',brl(S.caixa),S.divida?`dívida de ${brl(S.divida)}`:'sem dívidas',S.caixa<0?'bad':'')}
+   ${kpi('Lucro do último mês',last?brl(last.lucro):'—',last?`${last.mes}`:'feche o primeiro mês',last?(last.lucro>=0?'good':'bad'):'')}
+   ${kpi('Lucro acumulado',brl(acum),`${h.length} ${h.length===1?'mês fechado':'meses fechados'}`,acum>0?'good':acum<0?'bad':'')}
+   ${kpi('Patrimônio líquido',brl(patrimonio()),`capital inicial ${brl(S.capital)}`)}
+   <div class="kpi"><span>Reputação</span><b>${S.reputacao}/100</b>${meter(S.reputacao,100,S.reputacao<40?'bad':S.reputacao<60?'warn':'')}</div>
+  </div>
+  <div class="grid2"><div class="panel"><h2>Rotina do mês</h2><p>O ciclo de todo jogo empresarial: planejar, comprar, produzir, vender, apurar.</p>${rotina()}</div>
+  <div class="panel"><h2>Pontos de atenção</h2>${alertas()}</div></div>
+  <div class="panel"><h2>Receita e lucro por mês</h2>${chart(h)}</div>`;
+}
+
+function vPlano(){
+  const C=S.canvas,E=S.empresa;
+  const bl=(k,area,t,dica,cls)=>`<div class="cv ${cls||''}" style="grid-area:${area}"><label for="cv_${k}">${t}</label><small>${dica}</small><textarea id="cv_${k}" data-canvas="${k}" placeholder="Escreva aqui">${esc(C[k])}</textarea></div>`;
+  return head('Plano de negócio','Quem somos e como geramos valor','Toda empresa começa com uma ideia organizada. Preencha a identidade e o Canvas do modelo de negócio. Ele é salvo enquanto você digita.')+
+  `<div class="panel"><h2>Identidade da empresa</h2>
+   <div class="form">
+    <label>Nome da empresa<input type="text" id="em_nome" data-emp="nome" value="${esc(E.nome)}" style="width:220px"></label>
+    <label style="flex:1;min-width:220px">Slogan<input type="text" id="em_slogan" data-emp="slogan" value="${esc(E.slogan)}"></label>
+    <label style="flex:1;min-width:220px">Sócios (equipe)<input type="text" id="em_socios" data-emp="socios" value="${esc(E.socios)}" placeholder="Nomes dos integrantes"></label>
+    <label>Turma<input type="text" id="em_turma" data-emp="turma" value="${esc(E.turma)}" placeholder="Ex.: 2º A" style="width:110px"></label>
+   </div>
+   <label class="small muted" for="em_missao" style="font-weight:700">Missão: por que a empresa existe?</label>
+   <textarea id="em_missao" data-emp="missao" placeholder="Ex.: levar doces caseiros de qualidade, valorizando ingredientes do cerrado e gerando renda para jovens da comunidade.">${esc(E.missao)}</textarea>
+  </div>
+  <div class="panel"><h2>Canvas do modelo de negócio</h2><p>Comece pela proposta de valor e pelos clientes. Os outros blocos explicam como entregar e quanto custa.</p>
+  <div class="canvas">
+   ${bl('parcerias','par','Parcerias principais','Quem ajuda a empresa? Fornecedores, cooperativas, escola.')}
+   ${bl('atividades','atv','Atividades-chave','O que precisa ser feito todo dia? Produzir, vender, divulgar.')}
+   ${bl('recursos','rec','Recursos principais','Cozinha, receitas, equipe, redes sociais.')}
+   ${bl('proposta','pro','Proposta de valor','Por que o cliente escolheria você e não o concorrente?','pro')}
+   ${bl('relacionamento','rel','Relacionamento','Como conquistar e manter clientes? Atendimento, fidelidade.')}
+   ${bl('canais','can','Canais','Por onde o cliente compra e conhece a marca?')}
+   ${bl('segmentos','seg','Segmentos de clientes','Para quem você vende? Estudantes, cafés, buffets.')}
+   ${bl('custos','cus','Estrutura de custos','Quais os maiores gastos? Insumos, aluguel, salários.')}
+   ${bl('receitas','rev','Fontes de receita','Como entra dinheiro? Varejo, encomendas, revenda.')}
+  </div></div>
+  <div class="grid2">
+   <div class="panel"><h2>Salvamento automático</h2>
+    <p>${NUV.ok?'Cada ação é salva na sua conta, na nuvem. Ao abrir o ERP em outro dia ou em outro computador, entrando com a mesma conta, a empresa continua de onde parou.':NUV.estado==='semPermissao'?'Sua conta não tem permissão para salvar na nuvem neste link. A empresa fica salva neste navegador; para levar a outro computador, use o arquivo da empresa ao lado.':'Cada ação é salva automaticamente neste navegador. Ao abrir o ERP de novo neste computador, a empresa continua de onde parou.'}</p>
+    <p class="small muted">Última gravação: ${S.salvoEm?new Date(S.salvoEm).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'ainda não houve alterações'}.</p></div>
+   <div class="panel"><h2>Arquivo da empresa</h2><p>Cópia de segurança para guardar no pendrive ou no Drive. Também serve para continuar a empresa em outro computador.</p>
+    <div class="form"><button class="btn pri" data-act="baixar" type="button">Baixar arquivo da empresa</button><button class="btn" data-act="abrirArquivo" type="button">Abrir arquivo da empresa</button><input type="file" id="arq" accept=".json,application/json" hidden></div>
+    <div class="form"><button class="btn ghost" data-act="reset" type="button">Começar nova empresa</button></div></div>
+  </div>`;
+}
+
+function vProdutos(){
+  return head('Cadastro','Produtos e preços','O preço precisa cobrir o custo, os impostos e ainda contribuir para os custos fixos. Altere o preço e veja a margem mudar.')+
+  `<div class="panel soft"><h2>Como formar o preço</h2>
+   <div class="formula">Custo unitário = soma dos insumos da ficha técnica<br>Markup = preço ÷ custo unitário<br>Margem de contribuição = preço − custo unitário − 6% de imposto</div>
+   <p class="tip">Um preço muito acima do concorrente derruba a procura; muito abaixo do custo gera prejuízo a cada venda. A procura reage ao preço relativo ao concorrente.</p></div>
+  <div class="cards">${S.produtos.map(p=>{
+    const c=custoPadrao(p),mc=p.preco-c-p.preco*IMPOSTO,mcp=p.preco?mc/p.preco:0,mk=c?p.preco/c:0,rel=p.preco/p.conc-1;
+    return `<article class="card"><header><div><h3>${esc(p.nome)}</h3><span class="small muted">por ${esc(p.un)} · ${p.perecivel?'perecível':'não perecível'}</span></div>${mc<0?'<span class="pill bad">Prejuízo</span>':mcp<0.3?'<span class="pill warn">Margem baixa</span>':'<span class="pill good">Margem saudável</span>'}</header>
+     <div class="form"><label>Seu preço (R$)<input type="number" step="0.05" min="0.05" id="pr_${p.id}" data-preco="${p.id}" value="${p.preco}"></label><label>Concorrente<span class="num" style="padding:7px 0;color:var(--ink);font-weight:400">${brl(p.conc)}</span></label></div>
+     <div class="row"><span>Custo unitário (preços atuais)</span><b>${brl(c)}</b></div>
+     <div class="row"><span>Markup</span><b>${num(mk,2)}×</b></div>
+     <div class="row"><span>Margem de contribuição</span><b>${brl(mc)} · ${pct(mcp)}</b></div>
+     <div class="row"><span>Preço vs. concorrente</span><b>${rel>=0?'+':''}${pct(rel)}</b></div>
+     <div class="row"><span>Em estoque</span><b>${num(p.estoque)} ${esc(p.un)}</b></div>
+     <details><summary class="small" style="cursor:pointer;font-weight:700">Ficha técnica (1 ${esc(p.un)})</summary>
+      <ul class="small muted" style="margin:6px 0 0;padding-left:18px">${Object.entries(p.ficha).map(([k,q])=>{const i=ins(k);return i?`<li>${num(q,q<1?3:0)} ${esc(i.un)} de ${esc(i.nome)} = ${brl(q*i.preco)}</li>`:''}).join('')}<li>${num(r2(p.horas*60),1)} min de trabalho</li></ul></details>
+    </article>`}).join('')}</div>
+  <details class="panel"><summary>Lançar um novo produto</summary>
+   <p class="small muted">Defina a ficha técnica com os insumos cadastrados. A procura estimada é o resultado da sua pesquisa de mercado: quantas unidades por mês você acredita vender ao preço do concorrente.</p>
+   <div class="form">
+    <label>Nome<input type="text" id="np_n" placeholder="Ex.: Pé de moleque" style="width:200px"></label>
+    <label>Unidade<input type="text" id="np_u" value="un" style="width:70px"></label>
+    <label>Seu preço (R$)<input type="number" id="np_p" step="0.05"></label>
+    <label>Preço do concorrente<input type="number" id="np_c" step="0.05"></label>
+    <label>Minutos por unidade<input type="number" id="np_h" step="0.5" value="3"></label>
+    <label>Procura estimada/mês<input type="number" id="np_b" step="10" value="100"></label>
+    <label>Perecível?<select id="np_per"><option value="sim">Sim</option><option value="nao">Não</option></select></label>
+   </div>
+   <div class="tbl"><table><thead><tr><th>Insumo</th><th>Unidade</th><th class="n">Preço</th><th class="n">Qtd. por unidade</th></tr></thead><tbody>
+   ${S.insumos.map(i=>`<tr><td>${esc(i.nome)}</td><td>${esc(i.un)}</td><td class="n">${brl(i.preco)}</td><td class="n"><input type="number" step="0.001" min="0" id="npf_${i.id}" placeholder="0"></td></tr>`).join('')}</tbody></table></div>
+   <div><button class="btn pri" data-act="novoProduto" type="button">Lançar produto</button></div>
+  </details>`;
+}
+
+function vCompras(){
+  const sug=sugestoes(),totSug=S.insumos.reduce((a,i)=>a+(sug[i.id]||0)*i.preco,0);
+  return head('Suprimentos','Compras e estoque',`Compre à vista ou a prazo (pagamento no fim do próximo mês, com acréscimo de ${pct(PRAZO_ACRESC)}). A sugestão usa a previsão de vendas e a ficha técnica.`)+
+  `<div class="kpis">${kpi('Caixa disponível',brl(S.caixa))}${kpi('Valor em estoque',brl(valorEstoque()),'insumos e produtos pelo custo médio')}${kpi('Contas a pagar',brl(totPagar()),'compras a prazo')}${kpi('Compra sugerida',brl(totSug),'para atender a previsão do mês')}</div>
+  <div class="panel"><div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center"><h2>Insumos</h2><button class="btn pri" data-act="comprarSugestao" type="button">Comprar sugestão à vista</button></div>
+  <div class="tbl"><table><thead><tr><th>Insumo</th><th>Fornecedor</th><th class="n">Preço atual</th><th class="n">Estoque</th><th class="n">Custo médio</th><th class="n">Sugestão</th><th class="n">Quantidade</th><th>Pagamento</th><th></th></tr></thead><tbody>
+  ${S.insumos.map(i=>{const f=S.fornecedores.find(x=>x.id===i.forn);const s=sug[i.id]||0;return `<tr><td><b>${esc(i.nome)}</b><br><span class="small muted">${esc(i.un)}</span></td><td class="small">${esc(f?f.nome:'—')}</td><td class="n">${brl(i.preco)}</td><td class="n">${num(i.estoque)}</td><td class="n">${i.cm?brl(i.cm):'—'}</td><td class="n">${s?`<span class="pill warn">${num(s)}</span>`:'<span class="pill good">ok</span>'}</td>
+   <td class="n"><input type="number" min="0" step="${i.un==='kg'?'0.1':'1'}" id="q_${i.id}" value="${s||''}"></td><td><select id="f_${i.id}"><option value="vista">À vista</option><option value="prazo">A prazo (+3%)</option></select></td><td><button class="btn sm" data-act="comprar" data-id="${i.id}" type="button">Comprar</button></td></tr>`}).join('')}
+  </tbody></table></div></div>
+  <div class="grid2">
+   <div class="panel"><h2>Fornecedores</h2><div class="tbl"><table><thead><tr><th>Nome</th><th>Fornece</th></tr></thead><tbody>${S.fornecedores.map(f=>`<tr><td><b>${esc(f.nome)}</b></td><td class="small">${esc(f.fornece)}</td></tr>`).join('')}</tbody></table></div>
+    <div class="form"><label>Novo fornecedor<input type="text" id="nf_n"></label><label>O que fornece<input type="text" id="nf_o"></label><button class="btn" data-act="novoForn" type="button">Cadastrar</button></div></div>
+   <div class="panel"><h2>Novo insumo</h2><p>Cadastre ingredientes ou embalagens para criar produtos novos.</p>
+    <div class="form"><label>Nome<input type="text" id="ni_n" placeholder="Ex.: Amendoim" style="width:160px"></label><label>Unidade<input type="text" id="ni_u" value="kg" style="width:70px"></label><label>Preço (R$)<input type="number" id="ni_p" step="0.01"></label>
+    <label>Fornecedor<select id="ni_f">${S.fornecedores.map(f=>`<option value="${f.id}">${esc(f.nome)}</option>`).join('')}</select></label><button class="btn" data-act="novoInsumo" type="button">Cadastrar</button></div></div>
+  </div>`;
+}
+
+function vProducao(){
+  const ht=horasTot(),hu=S.horasUsadas;
+  return head('Operações','Produção','Cada lote consome insumos e horas de trabalho. Os sócios têm 80 horas por mês; cada auxiliar de produção acrescenta 160.')+
+  `<div class="panel"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px"><h2>Capacidade do mês</h2><span class="num">${num(hu)} h usadas de ${num(ht)} h</span></div>${meter(hu,ht,hu/ht>0.9?'bad':hu/ht>0.7?'warn':'')}</div>
+  <div class="panel"><h2>Ordens de produção</h2>
+  <div class="tbl"><table><thead><tr><th>Produto</th><th class="n">Estoque</th><th class="n">Procura prevista</th><th class="n">Custo do lote/un</th><th class="n">Tempo/un</th><th class="n">Máx. possível</th><th class="n">Produzir</th><th></th></tr></thead><tbody>
+  ${S.produtos.map(p=>{const d=demanda(p,false),mx=maxProduzivel(p),s=Math.min(mx,Math.max(0,d-p.estoque));return `<tr><td><b>${esc(p.nome)}</b></td><td class="n">${num(p.estoque)}</td><td class="n">~${num(d)}</td><td class="n">${brl(custoEstoque(p))}</td><td class="n">${num(r2(p.horas*60),1)} min</td><td class="n">${mx?num(mx):'<span class="pill bad">0</span>'}</td><td class="n"><input type="number" min="0" step="1" id="p_${p.id}" value="${s||''}"></td><td><button class="btn sm pri" data-act="produzir" data-id="${p.id}" type="button">Produzir</button></td></tr>`}).join('')}
+  </tbody></table></div>
+  <p class="tip"><b>Atenção aos perecíveis:</b> 20% do que sobrar de brigadeiro e bolo de pote no fim do mês vira perda. Produza perto da procura prevista. A previsão é uma estimativa; a procura real varia cerca de 8% para mais ou para menos.</p></div>
+  <div class="panel"><h2>Insumos disponíveis</h2><div class="tbl"><table><thead><tr><th>Insumo</th><th class="n">Estoque</th><th class="n">Custo médio</th></tr></thead><tbody>${S.insumos.map(i=>`<tr><td>${esc(i.nome)}</td><td class="n">${num(i.estoque)} ${esc(i.un)}</td><td class="n">${i.cm?brl(i.cm):'—'}</td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+function vVendas(){
+  const vm=S.vendas.filter(v=>v.r===S.rodada);
+  return head('Comercial','Vendas e clientes','O varejo compra automaticamente no fechamento do mês. Pedidos de empresas e vendas diretas você registra aqui.')+
+  `<div class="panel"><h2>Pedidos de clientes</h2><p>Empresas pedem quantidades maiores com desconto. Aceitar exige estoque agora. Pedidos não respondidos expiram no fim do mês.</p>
+  ${S.pedidos.length?S.pedidos.map(o=>{const p=prod(o.pid);const desc=1-o.preco/p.preco;return `<div class="order"><div><b>${esc(o.cliente)}</b> pede <b>${num(o.qtd)} ${esc(p.un)}</b> de ${esc(p.nome)} a <span class="num">${brl(o.preco)}</span>/un · total <span class="num">${brl(o.qtd*o.preco)}</span><br>
+   <span class="small muted">${o.forma==='prazo'?'Paga em 30 dias':'Paga à vista'} · ${desc>0?`${pct(desc)} abaixo do seu preço`:'no seu preço ou acima'} · margem de ${brl(o.preco-p.cm-o.preco*IMPOSTO)}/un · estoque: ${num(p.estoque)}</span></div>
+   <div class="acts"><button class="btn sm ghost" data-act="recusar" data-id="${o.id}" type="button">Recusar</button><button class="btn sm pri" data-act="aceitar" data-id="${o.id}" type="button" ${p.estoque<o.qtd?'disabled title="Estoque insuficiente"':''}>Aceitar e entregar</button></div></div>`}).join(''):'<p class="empty">Nenhum pedido em aberto. Novos pedidos chegam a cada mês.</p>'}
+  </div>
+  <div class="grid2">
+  <div class="panel"><h2>Venda direta</h2><p>Encomendas por telefone, feira da escola, revenda.</p>
+   <div class="form">
+    <label>Cliente<select id="vd_c">${S.clientes.map(c=>`<option>${esc(c.nome)}</option>`).join('')}<option>Consumidor avulso</option></select></label>
+    <label>Produto<select id="vd_p">${S.produtos.map(p=>`<option value="${p.id}">${esc(p.nome)} (${num(p.estoque)})</option>`).join('')}</select></label>
+    <label>Qtd.<input type="number" id="vd_q" min="1" step="1" style="width:80px"></label>
+    <label>Preço/un<input type="number" id="vd_v" step="0.05" value="${S.produtos[0]?.preco||''}" style="width:90px"></label>
+    <label>Pagamento<select id="vd_f"><option value="vista">À vista</option><option value="prazo">30 dias</option></select></label>
+    <button class="btn pri" data-act="vendaDireta" type="button">Registrar venda</button>
+   </div></div>
+  <div class="panel"><h2>Clientes</h2>
+   <div class="tbl"><table><thead><tr><th>Nome</th><th>Tipo</th><th>Observação</th><th></th></tr></thead><tbody>${S.clientes.map(c=>`<tr><td><b>${esc(c.nome)}</b></td><td>${esc(c.tipo)}</td><td class="small muted">${esc(c.obs)}</td><td><button class="btn sm ghost" data-act="delCliente" data-id="${c.id}" type="button" aria-label="Remover ${esc(c.nome)}">Remover</button></td></tr>`).join('')}</tbody></table></div>
+   <div class="form"><label>Nome<input type="text" id="nc_n" style="width:150px"></label><label>Tipo<select id="nc_t"><option>Empresa</option><option>Pessoa</option></select></label><label>Observação<input type="text" id="nc_o" style="width:150px"></label><button class="btn" data-act="novoCliente" type="button">Cadastrar</button></div>
+   <p class="small muted">Clientes do tipo Empresa passam a enviar pedidos nos próximos meses.</p></div>
+  </div>
+  <div class="panel"><h2>Histórico de vendas</h2>${S.vendas.length?`<div class="tbl"><table><thead><tr><th>Mês</th><th>Cliente</th><th>Produto</th><th class="n">Qtd.</th><th class="n">Preço</th><th class="n">Total</th><th>Pagamento</th></tr></thead><tbody>
+   ${S.vendas.slice(-30).reverse().map(v=>`<tr><td>M${v.r}</td><td>${esc(v.cliente)}</td><td>${esc(v.produto)}</td><td class="n">${num(v.qtd)}</td><td class="n">${brl(v.preco)}</td><td class="n">${brl(v.total)}</td><td>${v.forma==='prazo'?'<span class="pill warn">30 dias</span>':'<span class="pill mute">à vista</span>'}</td></tr>`).join('')}</tbody></table></div>`:'<p class="empty">Ainda não há vendas. Elas aparecem aqui ao aceitar pedidos ou fechar o mês.</p>'}
+  ${vm.length?`<p class="small muted">Neste mês: ${brl(vm.reduce((a,v)=>a+v.total,0))} em vendas diretas e pedidos.</p>`:''}</div>`;
+}
+
+function vFinanceiro(){
+  const venc=S.pagar.filter(x=>x.vence<=S.rodada);
+  return head('Finanças','Financeiro','Caixa é o dinheiro disponível agora. Lucro é o resultado do mês. Os dois andam juntos, mas não são a mesma coisa.')+
+  `<div class="kpis">${kpi('Caixa',brl(S.caixa),'',S.caixa<0?'bad':'')}${kpi('A receber',brl(totReceber()),'vendas a prazo')}${kpi('A pagar',brl(totPagar()),venc.length?`${brl(venc.reduce((a,x)=>a+x.valor,0))} vencem neste mês`:'')}${kpi('Empréstimos',brl(S.divida),`juros de ${pct(JUROS)} ao mês = ${brl(S.divida*JUROS)}`)}</div>
+  <div class="grid2">
+   <div class="panel"><h2>Banco</h2><p>Empréstimos ajudam no capital de giro, mas os juros reduzem o lucro todo mês. Limite: R$ 15.000.</p>
+    <div class="form"><label>Pegar empréstimo (R$)<input type="number" id="emp_v" step="100" min="0"></label><button class="btn" data-act="emprestar" type="button">Contratar</button></div>
+    <div class="form"><label>Amortizar dívida (R$)<input type="number" id="amo_v" step="100" min="0"></label><button class="btn" data-act="amortizar" type="button">Pagar</button></div>
+    <p class="tip">Se o caixa ficar negativo no fechamento, o banco cobre com <b>cheque especial</b> e cobra 8% de tarifa na hora.</p></div>
+   <div class="panel"><h2>Contas abertas</h2>
+    <h3 class="small">A pagar</h3>${S.pagar.length?`<div class="tbl"><table><tbody>${S.pagar.map(x=>`<tr><td class="small">${esc(x.desc)}</td><td>${x.vence<=S.rodada?'<span class="pill warn">vence neste mês</span>':`M${x.vence}`}</td><td class="n">${brl(x.valor)}</td></tr>`).join('')}</tbody></table></div>`:'<p class="empty">Nenhuma.</p>'}
+    <h3 class="small">A receber</h3>${S.receber.length?`<div class="tbl"><table><tbody>${S.receber.map(x=>`<tr><td class="small">${esc(x.desc)}</td><td>${x.vence<=S.rodada?'<span class="pill good">entra neste mês</span>':`M${x.vence}`}</td><td class="n">${brl(x.valor)}</td></tr>`).join('')}</tbody></table></div>`:'<p class="empty">Nenhuma.</p>'}
+   </div></div>
+  <div class="panel"><h2>Livro-caixa</h2><p>Todas as entradas e saídas de dinheiro, das mais recentes para as mais antigas.</p>
+   <div class="tbl"><table><thead><tr><th>Mês</th><th>Categoria</th><th>Descrição</th><th class="n">Entrada</th><th class="n">Saída</th></tr></thead><tbody>
+   ${S.lanc.slice(-60).reverse().map(l=>`<tr><td>M${l.r}</td><td><span class="pill ${l.tipo==='e'?'good':'mute'}">${esc(l.cat)}</span></td><td class="small">${esc(l.desc)}</td><td class="n">${l.tipo==='e'?brl(l.valor):''}</td><td class="n">${l.tipo==='s'?brl(l.valor):''}</td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+function vPessoas(){
+  return head('Recursos humanos','Pessoas',`Funcionários aumentam a capacidade e as vendas, mas custam salário mais ~${pct(ENCARGOS)} de encargos todo mês. Desligar custa um salário de rescisão.`)+
+  `<div class="kpis">${kpi('Equipe',`${S.funcionarios.length} ${S.funcionarios.length===1?'pessoa':'pessoas'}`,'além dos sócios')}${kpi('Folha mensal',brl(folha()),'salários + encargos')}${kpi('Horas de produção',`${num(horasTot())} h`,`${num(horasLivres())} h livres neste mês`)}</div>
+  <div class="grid2">${Object.entries(CARGOS).map(([k,c])=>`<div class="panel"><h2>${c.nome}</h2><p>${c.efeito}. Salário ${brl(c.salario)} · custo total ${brl(c.salario*(1+ENCARGOS))}/mês.</p>
+   <div class="form"><label>Nome (opcional)<input type="text" id="fn_${k}" placeholder="Ex.: Ana"></label><button class="btn pri" data-act="contratar" data-c="${k}" type="button">Contratar</button></div></div>`).join('')}</div>
+  <div class="panel"><h2>Quadro de funcionários</h2>${S.funcionarios.length?`<div class="tbl"><table><thead><tr><th>Nome</th><th>Cargo</th><th>Desde</th><th class="n">Custo mensal</th><th></th></tr></thead><tbody>
+   ${S.funcionarios.map(f=>`<tr><td><b>${esc(f.nome)}</b></td><td>${CARGOS[f.cargo].nome}</td><td>M${f.desde}</td><td class="n">${brl(f.salario*(1+ENCARGOS))}</td><td><button class="btn sm ghost danger" data-act="demitir" data-id="${f.id}" type="button">Desligar</button></td></tr>`).join('')}</tbody></table></div>`:'<p class="empty">Só os sócios trabalham por enquanto. Contrate quando a procura passar da capacidade de produção.</p>'}
+   <p class="tip"><b>Pergunta de empreendedor:</b> o lucro extra que o funcionário gera é maior que o custo dele? Calcule com a margem de contribuição de cada produto.</p></div>`;
+}
+
+function vMercado(){
+  const m=S.marketing,fm=1+0.4*(1-Math.exp(-m/700)),sz=(S.rodada-1)%12;
+  return head('Estratégia','Marketing e mercado','A procura depende do seu preço comparado ao concorrente, da divulgação, da reputação, da época do ano e dos eventos.')+
+  `<div class="grid2"><div class="panel"><h2>Orçamento de marketing do mês</h2><p>Redes sociais, degustação, panfletos. O efeito cresce com o investimento, mas cada real extra rende menos que o anterior.</p>
+   <div class="form"><label>Valor (R$)<input type="number" id="mkt" min="0" step="50" value="${m}"></label><span class="num" style="padding-bottom:7px">efeito na procura: +${pct(fm-1)}</span></div>
+   <div class="formula">R$ 200 → +${pct(0.4*(1-Math.exp(-200/700)))} · R$ 500 → +${pct(0.4*(1-Math.exp(-500/700)))} · R$ 1.000 → +${pct(0.4*(1-Math.exp(-1000/700)))} · R$ 2.000 → +${pct(0.4*(1-Math.exp(-2000/700)))}</div></div>
+  <div class="panel"><h2>Ambiente deste mês</h2>
+   <div class="row" style="display:flex;justify-content:space-between"><span>Época do ano (${mesNome(S.rodada)}${SAZ_MOTIVO[sz]?', '+SAZ_MOTIVO[sz]:''})</span><b class="num">${SAZ[sz]>=1?'+':''}${pct(SAZ[sz]-1)}</b></div>
+   <div class="row" style="display:flex;justify-content:space-between"><span>Reputação (${S.reputacao}/100)</span><b class="num">${pct(0.75+0.5*S.reputacao/100-1)}</b></div>
+   <div class="row" style="display:flex;justify-content:space-between"><span>Vendedores (${nCargo('vendas')})</span><b class="num">+${pct(0.15*nCargo('vendas'))}</b></div>
+   <div class="news" style="margin-top:6px"><span class="tag">Evento</span><b>${esc(S.evento.titulo)}</b><p class="small">${esc(S.evento.texto)}</p></div></div></div>
+  <div class="panel"><h2>Previsão de procura por produto</h2>
+   <div class="tbl"><table><thead><tr><th>Produto</th><th class="n">Seu preço</th><th class="n">Concorrente</th><th class="n">Efeito do preço</th><th class="n">Procura prevista</th><th class="n">Receita prevista</th></tr></thead><tbody>
+   ${S.produtos.map(p=>{const f=fatores(p),d=demanda(p,false);return `<tr><td><b>${esc(p.nome)}</b></td><td class="n">${brl(p.preco)}</td><td class="n">${brl(f.ref)}</td><td class="n">${f.preco>=1?'<span class="pill good">':'<span class="pill warn">'}${f.preco>=1?'+':''}${pct(f.preco-1)}</span></td><td class="n">~${num(d)}</td><td class="n">${brl(d*p.preco)}</td></tr>`}).join('')}</tbody></table></div>
+   <p class="tip">Teste: aumente o preço de um produto em Produtos e preços e volte aqui. A receita prevista sobe ou cai? Isso é a <b>elasticidade</b> da procura.</p></div>
+  <div class="panel"><h2>Calendário de vendas</h2><div class="tbl"><table><thead><tr>${MESES.map((x,i)=>`<th class="n" ${i===sz?'style="color:var(--accent)"':''}>${x.slice(0,3)}</th>`).join('')}</tr></thead><tbody><tr>${SAZ.map((s,i)=>`<td class="n" ${i===sz?'style="font-weight:700;color:var(--accent)"':''}>${s>=1?'+':''}${Math.round((s-1)*100)}%</td>`).join('')}</tr></tbody></table></div></div>`;
+}
+
+function vRelatorios(){
+  const h=S.hist.slice(-6),last=S.hist[S.hist.length-1];
+  const rows=[['Receita bruta','receita'],['(−) Impostos (Simples 6%)','imposto',1],['= Receita líquida','rliq',0,'tot'],['(−) Custo dos produtos vendidos','cpv',1],['(−) Perdas de estoque','perdas',1],['= Lucro bruto','lbruto',0,'tot'],['(−) Salários e encargos','salarios',1],['(−) Aluguel, gás e energia','fixos',1],['(−) Marketing','mkt',1],['(−) Rescisões','resc',1],['(−) Juros e tarifas','juros',1],['= Lucro líquido','lucro',0,'tot strong']];
+  let ind='';
+  if(last){
+    const cf=last.salarios+last.fixos+last.mkt+last.juros+last.resc,mcp=last.receita?(last.rliq-last.cpv-last.perdas)/last.receita:0,pe=mcp>0?cf/mcp:Infinity;
+    ind=`<div class="kpis">${kpi('Margem bruta',pct(last.receita?last.lbruto/last.receita:0),last.mes)}${kpi('Margem líquida',pct(last.receita?last.lucro/last.receita:0),last.mes,last.lucro>=0?'good':'bad')}
+     ${kpi('Ponto de equilíbrio',isFinite(pe)?brl(pe):'—',`faturamento mínimo/mês (vendeu ${brl(last.receita)})`,isFinite(pe)&&last.receita>=pe?'good':'bad')}
+     ${kpi('ROI acumulado',pct((patrimonio()-S.capital)/S.capital),'patrimônio vs. capital inicial')}</div>
+     <div class="formula">Ponto de equilíbrio = custos fixos ${brl(cf)} ÷ margem de contribuição ${pct(mcp)} = ${isFinite(pe)?brl(pe):'sem margem positiva'}</div>`;
+  }
+  const est=valorEstoque(),at=S.caixa+est+totReceber(),ps=totPagar()+S.divida;
+  const fl={};S.lanc.forEach(l=>{fl[l.r]=fl[l.r]||{e:0,s:0};fl[l.r][l.tipo]+=l.valor});
+  let saldo=0;const flRows=Object.keys(fl).map(Number).sort((a,b)=>a-b).map(r=>{saldo+=fl[r].e-fl[r].s;return `<tr><td>M${r} · ${mesNome(r)}</td><td class="n">${brl(fl[r].e)}</td><td class="n">${brl(fl[r].s)}</td><td class="n">${brl(fl[r].e-fl[r].s)}</td><td class="n">${brl(saldo)}</td></tr>`}).slice(-8).join('');
+  return head('Controladoria','Relatórios','A DRE mostra se a empresa ganhou ou perdeu dinheiro. O balanço mostra o que ela tem e o que deve. O fluxo de caixa mostra por onde o dinheiro passou.')+
+  (last?ind:'')+
+  `<div class="panel"><h2>DRE: Demonstração do Resultado</h2>${h.length?`<div class="tbl"><table><thead><tr><th>Conta</th>${h.map(x=>`<th class="n">M${x.r} · ${x.mes.slice(0,3)}</th>`).join('')}</tr></thead><tbody>
+   ${rows.map(([t,k,neg,cls])=>`<tr class="${cls||''}"><td>${t}</td>${h.map(x=>`<td class="n" ${k==='lucro'?`style="color:var(${x.lucro>=0?'--good':'--bad'})"`:''}>${neg&&x[k]?brl(-x[k]):brl(x[k])}</td>`).join('')}</tr>`).join('')}
+   </tbody></table></div><p class="small muted">Mostrando os últimos ${h.length} meses. Receita inclui varejo, pedidos e vendas diretas, mesmo as recebidas a prazo.</p>`:'<p class="empty">A DRE é gerada quando você fecha o primeiro mês.</p>'}</div>
+  <div class="grid2">
+   <div class="panel"><h2>Balanço patrimonial simplificado</h2><div class="tbl"><table><tbody>
+    <tr class="tot"><td>Ativo (o que a empresa tem)</td><td class="n">${brl(at)}</td></tr>
+    <tr><td>Caixa</td><td class="n">${brl(S.caixa)}</td></tr><tr><td>Estoques</td><td class="n">${brl(est)}</td></tr><tr><td>Contas a receber</td><td class="n">${brl(totReceber())}</td></tr>
+    <tr class="tot"><td>Passivo (o que a empresa deve)</td><td class="n">${brl(ps)}</td></tr>
+    <tr><td>Fornecedores a pagar</td><td class="n">${brl(totPagar())}</td></tr><tr><td>Empréstimos</td><td class="n">${brl(S.divida)}</td></tr>
+    <tr class="tot strong"><td>Patrimônio líquido (dos sócios)</td><td class="n">${brl(at-ps)}</td></tr>
+   </tbody></table></div><p class="small muted">Ativo − Passivo = Patrimônio líquido. Capital investido: ${brl(S.capital)}.</p></div>
+   <div class="panel"><h2>Fluxo de caixa por mês</h2>${flRows?`<div class="tbl"><table><thead><tr><th>Mês</th><th class="n">Entradas</th><th class="n">Saídas</th><th class="n">Saldo do mês</th><th class="n">Acumulado</th></tr></thead><tbody>${flRows}</tbody></table></div>`:'<p class="empty">Sem movimentos.</p>'}</div>
+  </div>
+  <div class="panel"><h2>Receita e lucro por mês</h2>${chart(S.hist)}</div>`;
+}
+
+function vMissoes(){
+  const done=MISSOES.filter(m=>m.ok()).length,pts=done*10;
+  const nivel=done>=10?'Empresa consolidada':done>=7?'Pequena empresa':done>=4?'Startup':'Ideia no papel';
+  return head('Aprender','Missões e glossário','Cada missão treina uma competência de quem empreende. O progresso é calculado a partir do que a empresa já fez.')+
+  `<div class="panel soft"><h2>Sobre o projeto Empreende BB</h2><p>Software educacional usado pelos estudantes para criar e administrar uma empresa simulada, mês a mês, aprendendo gestão na prática.</p>
+   <div class="about"><div><span>Escola</span><b>Escola Deputado Renê Barbour</b></div><div><span>Município</span><b>Barra do Bugres – MT</b></div><div><span>Coordenação</span><b>Prof. Dr. Ramão Humberto Martins Manvailer</b></div><div><span>Instituição</span><b>UNEMAT</b></div></div></div>`+
+  `<div class="kpis">${kpi('Nível da empresa',nivel)}${kpi('Pontos',`${pts} de ${MISSOES.length*10}`)}<div class="kpi"><span>Progresso</span><b>${done}/${MISSOES.length}</b>${meter(done,MISSOES.length)}</div></div>
+  <div class="panel"><h2>Missões</h2>${MISSOES.map(m=>{const ok=m.ok();return `<div class="mission"><span class="dot ${ok?'ok':'todo'}">${ok?'✓':''}</span><div style="flex:1"><h3>${m.t}</h3><p>${m.d}</p></div>${ok?'<span class="pill good">Concluída</span>':'<span class="pill mute">+10</span>'}</div>`}).join('')}</div>
+  <div class="panel soft"><h2>Para discutir em grupo</h2><ol class="small" style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px">
+   <li>Por que um mês pode ter lucro na DRE e mesmo assim o caixa diminuir?</li>
+   <li>Vale a pena aceitar um pedido com 15% de desconto? Do que depende?</li>
+   <li>Quando faz sentido pegar empréstimo? Quando é um erro?</li>
+   <li>Qual dos três produtos dá mais margem por hora de trabalho? Isso deveria mudar o que vocês produzem?</li>
+   <li>Que impacto a empresa de vocês gera na comunidade, além do lucro?</li></ol></div>
+  <div class="panel"><h2>Glossário</h2><div class="gloss">${GLOSSARIO.map(([t,d])=>`<div><b>${t}</b><p>${d}</p></div>`).join('')}</div></div>`;
+}
+
+function vTurma(){
+  if(!NUV.owner)return head('Professor','Turma','Esta tela aparece apenas para o professor responsável pelo ERP.');
+  const t=NUV.turma;
+  const lista=t?[...t].sort((a,b)=>(b.patrimonio||0)-(a.patrimonio||0)):null;
+  return head('Professor','Empresas da turma','Acompanhe as equipes que salvaram na nuvem. Os dados são atualizados quando você clica no botão.')+
+  `<div class="panel"><div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center"><h2>${lista?`${lista.length} ${lista.length===1?'empresa':'empresas'}`:'Equipes'}</h2><button class="btn pri" data-act="turma" type="button" ${NUV.carregando?'disabled':''}>${NUV.carregando?'Carregando…':'Atualizar lista'}</button></div>
+  ${!lista?'<p class="empty">Clique em Atualizar lista para ver as empresas salvas.</p>':!lista.length?'<p class="empty">Nenhuma equipe salvou na nuvem ainda.</p>':`<div class="tbl"><table><thead><tr><th class="n">#</th><th>Empresa</th><th>Turma</th><th>Sócios</th><th class="n">Mês</th><th class="n">Caixa</th><th class="n">Lucro acumulado</th><th class="n">Patrimônio</th><th class="n">Reputação</th><th class="n">Missões</th><th>Última gravação</th></tr></thead><tbody>
+  ${lista.map((e,i)=>`<tr><td class="n">${i+1}</td><td><b>${esc(e.nome)}</b></td><td>${esc(e.turma)}</td><td class="small">${esc(e.socios)}</td><td class="n">${num(e.rodada||1)}</td><td class="n">${brl(e.caixa||0)}</td><td class="n" style="color:var(${(e.lucroAcum||0)>=0?'--good':'--bad'})">${brl(e.lucroAcum||0)}</td><td class="n">${brl(e.patrimonio||0)}</td><td class="n">${num(e.reputacao||0)}</td><td class="n">${num(e.missoes||0)}/${MISSOES.length}</td><td class="small">${e.salvoEm?new Date(e.salvoEm).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'—'}</td></tr>`).join('')}
+  </tbody></table></div><p class="small muted">Ordenado pelo patrimônio líquido. O mês indica quantas rodadas a equipe já jogou.</p>`}</div>`;
+}
+const VIEWS={turma:vTurma,painel:vPainel,plano:vPlano,produtos:vProdutos,compras:vCompras,producao:vProducao,vendas:vVendas,financeiro:vFinanceiro,pessoas:vPessoas,mercado:vMercado,relatorios:vRelatorios,missoes:vMissoes};
+
+function render(){
+  $('#brandName').textContent=S.empresa.nome||'Minha empresa';
+  $('#nav').innerHTML=(NUV.owner?NAV.concat([['Professor',[['turma','Empresas da turma']]]]):NAV).map(([g,items])=>`<div class="grp">${g}</div>`+items.map(([k,t])=>`<a href="#${k}" ${view===k?'aria-current="page"':''}>${t}${k==='vendas'&&S.pedidos.length?`<span class="badge">${S.pedidos.length}</span>`:''}</a>`).join('')).join('');
+  $('#when').innerHTML=`Mês ${S.rodada} · ${mesNome(S.rodada)}<small>${esc(S.evento.titulo)}</small>`;
+  $('#chips').innerHTML=`<span class="chip ${S.caixa<0?'neg':''}">Caixa <b>${brl(S.caixa)}</b></span><span class="chip">Reputação <b>${S.reputacao}</b></span><span class="chip">Horas livres <b>${num(horasLivres())}</b></span><span class="chip save" id="salvo"></span>`;
+  statusSalvar();
+  const scroll=window.scrollY;
+  $('#view').innerHTML=(VIEWS[view]||vPainel)();
+  window.scrollTo(0,scroll);
+}
+function go(v){if(!VIEWS[v])v='painel';view=v;$('#modal').hidden=true;try{history.replaceState(null,'','#'+v)}catch(e){location.hash=v}render();window.scrollTo(0,0)}
+
+document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(b&&A[b.dataset.act]){e.preventDefault();A[b.dataset.act](b)}});
+document.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.dataset.preco){const v=parseFloat(t.value);const p=prod(t.dataset.preco);if(v>0&&v!==p.preco){p.preco=r2(v);S.stats.preco++;S.mes.revisou=true;save();render();toast(`Novo preço de ${p.nome}: ${brl(p.preco)}.`)}}
+  if(t.id==='mkt'){const v=Math.max(0,parseFloat(t.value)||0);S.marketing=r2(v);S.mes.revisou=true;save();render()}
+});
+let tSave;
+document.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.dataset.canvas!==undefined){S.canvas[t.dataset.canvas]=t.value;clearTimeout(tSave);tSave=setTimeout(save,300)}
+  if(t.dataset.emp){S.empresa[t.dataset.emp]=t.value;clearTimeout(tSave);tSave=setTimeout(()=>{save();$('#brandName').textContent=S.empresa.nome||'Minha empresa'},300)}
+});
+window.addEventListener('hashchange',()=>{const v=location.hash.slice(1);if(v!==view&&VIEWS[v]){view=v;render();window.scrollTo(0,0)}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#modal').hidden)A.fecharModal()});
+
+document.addEventListener('change',e=>{
+  if(e.target.id!=='arq'||!e.target.files||!e.target.files[0])return;
+  const f=e.target.files[0],rd=new FileReader();
+  rd.onload=()=>{try{const o=JSON.parse(rd.result);if(!o||o.v!==1||!o.produtos||!o.empresa)throw 0;S=o;save();render();toast(`Empresa ${S.empresa.nome} aberta no mês ${S.rodada}.`)}catch(err){toast('Este arquivo não é uma empresa do ERP Empreende BB. Escolha o arquivo .json baixado pelo ERP.',true)}};
+  rd.onerror=()=>toast('Não consegui ler o arquivo.',true);rd.readAsText(f);
+});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&NUV.t)gravarNuvem()});
+load();
+{const v=location.hash.slice(1);if(VIEWS[v])view=v}
+render();
+iniciarNuvem();
+</script>
+
+</body>
+</html>
