@@ -195,12 +195,12 @@ details.fund[open]{display:flex;flex-direction:column;gap:10px}
     <div class="brand"><div class="logo">AE</div><div><b>AgroEstratégia</b><small>Gestão estratégica agroindustrial</small></div></div>
     <div class="firm"><span>Grupo</span><b id="brandName">Laticínios Serra Azul</b></div>
     <nav class="nav" id="nav"></nav>
-    <div class="credit"><span><b>UNEMAT · Campus Barra do Bugres</b><br>Engenharia de Produção Agroindustrial · FAE</span><span>Planejamento Estratégico · Prof. Dr. Ramão Humberto Martins Manvailer</span></div>
+    <div class="credit"><span><b>Universidade do Estado de Mato Grosso – UNEMAT</b><br>Curso de Engenharia de Produção Agroindustrial<br>Disciplina de Planejamento Estratégico</span><span>Prof. Dr. Ramão Humberto Martins Manvailer</span></div>
   </aside>
   <div>
     <header class="top"><div class="when" id="when"></div><div class="chips" id="chips"></div><button class="btn acc" data-act="preFechar" type="button" id="btnFechar">Encerrar o ano</button></header>
     <main id="view"></main>
-    <footer class="foot"><span><b>AgroEstratégia</b> · Simulador de gestão estratégica agroindustrial</span><span>UNEMAT · Campus Barra do Bugres · Engenharia de Produção Agroindustrial</span><span>Prof. Dr. Ramão Humberto Martins Manvailer</span></footer>
+    <footer class="foot"><span><b>AgroEstratégia</b> · Simulador de gestão estratégica agroindustrial</span><span>Universidade do Estado de Mato Grosso – UNEMAT · Curso de Engenharia de Produção Agroindustrial · Disciplina de Planejamento Estratégico</span><span>Prof. Dr. Ramão Humberto Martins Manvailer</span></footer>
   </div>
 </div>
 <div class="modal" id="modal" hidden></div>
@@ -663,7 +663,7 @@ function progressoPlano(){
 }
 function vProjeto(){
   const g=S.grupo;
-  return head('Visão geral','Projeto e roteiro','Projeto Aplicado de Planejamento Estratégico em uma Agroindústria · Engenharia de Produção Agroindustrial · UNEMAT, Campus Barra do Bugres · Turma 2026/2')+
+  return head('Visão geral','Projeto e roteiro','Projeto Aplicado de Planejamento Estratégico em uma Agroindústria · Universidade do Estado de Mato Grosso – UNEMAT · Curso de Engenharia de Produção Agroindustrial · Disciplina de Planejamento Estratégico · Prof. Dr. Ramão Humberto Martins Manvailer · Turma 2026/2')+
   `<div class="panel"><h2>Grupo</h2><div class="fields"><label>Nome do grupo${inp('grupo.nome',{ph:'Ex.: Grupo 3'})}</label><label class="wide">Integrantes${inp('grupo.integrantes',{ph:'Nomes completos, separados por vírgula'})}</label><label>Turma${inp('grupo.turma')}</label></div></div>
   <div class="grid2"><div class="panel"><h2>Cronograma de entregas</h2><div class="tbl"><table><thead><tr><th>Etapa</th><th>Conteúdo</th><th>Prazo</th></tr></thead><tbody>
    <tr><td><b>Parte I</b><br><span class="small muted">Unidades I e II</span></td><td class="small"><b>Diagnóstico:</b> caracterização, fundamentação, identidade, PESTEL, Cinco Forças, diagnóstico interno e SWOT. <b>Formulação:</b> SWOT cruzada, BCG e Ansoff, estratégias competitivas, estratégia de produção, objetivos e GUT. Texto em Word e vídeo.</td><td>23/10/2026</td></tr>
@@ -1049,13 +1049,13 @@ async function gerarDocx(){
   const teo=id=>{const x=f(id);if(x.teoria)d.p(x.teoria)},ana=id=>{const x=f(id);if(x.analise){d.p('Análise e interpretação',{b:1,noInd:1});d.p(x.analise)}if(x.implic){d.p('Implicações estratégicas',{b:1,noInd:1});d.p(x.implic)}};
   const ferr=(id,aplicar)=>{teo(id);aplicar();ana(id)};
   // capa
-  ['UNIVERSIDADE DO ESTADO DE MATO GROSSO','CAMPUS BARRA DO BUGRES','FACULDADE DE ARQUITETURA E ENGENHARIAS – FAE','BACHARELADO EM ENGENHARIA DE PRODUÇÃO AGROINDUSTRIAL'].forEach(t=>d.p(t,{style:'Capa'}));
+  ['UNIVERSIDADE DO ESTADO DE MATO GROSSO – UNEMAT','CAMPUS BARRA DO BUGRES','FACULDADE DE ARQUITETURA E ENGENHARIAS – FAE','CURSO DE ENGENHARIA DE PRODUÇÃO AGROINDUSTRIAL'].forEach(t=>d.p(t,{style:'Capa'}));
   d.blank(3);(G.integrantes||'Integrantes do grupo').split(/,|\n/).map(s=>s.trim()).filter(Boolean).forEach(n=>d.p(n,{style:'Capa'}));d.blank(5);
   d.p(`PLANEJAMENTO ESTRATÉGICO APLICADO: ${E.nome||'AGROINDÚSTRIA'}`,{style:'Capa'});d.blank(10);d.p('BARRA DO BUGRES – MT',{style:'Capa'});d.p(String(ano),{style:'Capa'});d.brk();
   // folha de rosto
   (G.integrantes||'Integrantes do grupo').split(/,|\n/).map(s=>s.trim()).filter(Boolean).forEach(n=>d.p(n,{style:'Capa'}));d.blank(5);
   d.p(`PLANEJAMENTO ESTRATÉGICO APLICADO: ${E.nome||'AGROINDÚSTRIA'}`,{style:'Capa'});d.blank(3);
-  {d.p('Projeto Aplicado apresentado à disciplina de Planejamento Estratégico do curso de Bacharelado em Engenharia de Produção Agroindustrial da Universidade do Estado de Mato Grosso, Campus Barra do Bugres, como requisito parcial de avaliação.',{noInd:1});d.p('Professor: Prof. Dr. Ramão Humberto Martins Manvailer',{noInd:1})}
+  {d.p('Projeto Aplicado apresentado à Disciplina de Planejamento Estratégico do Curso de Engenharia de Produção Agroindustrial da Universidade do Estado de Mato Grosso – UNEMAT, Campus Barra do Bugres, Faculdade de Arquitetura e Engenharias – FAE, como requisito parcial de avaliação.',{noInd:1});d.p('Professor: Prof. Dr. Ramão Humberto Martins Manvailer',{noInd:1})}
   d.blank(6);d.p('BARRA DO BUGRES – MT',{style:'Capa'});d.p(String(ano),{style:'Capa'});d.brk();
   d.toc();d.brk();
   // 1
@@ -1132,7 +1132,7 @@ function vGlossario(){
   return head('Entrega','Referências e glossário','Conceitos usados no sistema e referências clássicas para a fundamentação teórica.')+
   `<div class="panel"><h2>Referências sugeridas</h2><ul class="small" style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px">${REFS_SUG.map(r=>`<li>${esc(r)}</li>`).join('')}</ul><p class="small muted">Confira edição, ano e páginas no exemplar consultado. Priorize também artigos científicos e documentos de órgãos como Embrapa, Conab, IBGE e MAPA.</p></div>
   <div class="panel"><h2>Glossário</h2><div class="cards">${GLOS.map(([t,d])=>`<div class="card"><b>${t}</b><p class="small muted">${d}</p></div>`).join('')}</div></div>
-  <div class="panel soft"><h2>Sobre o AgroEstratégia</h2><p class="small">Sistema didático desenvolvido para a disciplina de Planejamento Estratégico do curso de Bacharelado em Engenharia de Produção Agroindustrial da UNEMAT, Campus Barra do Bugres. Coordenação: Prof. Dr. Ramão Humberto Martins Manvailer. O caso Laticínios Serra Azul é fictício, construído com dados e características realistas do setor lácteo de Mato Grosso.</p></div>`;
+  <div class="panel soft"><h2>Sobre o AgroEstratégia</h2><p class="small">Sistema didático desenvolvido para a Disciplina de Planejamento Estratégico do Curso de Engenharia de Produção Agroindustrial da Universidade do Estado de Mato Grosso – UNEMAT, Campus Barra do Bugres, Faculdade de Arquitetura e Engenharias – FAE. Coordenação: Prof. Dr. Ramão Humberto Martins Manvailer. O caso Laticínios Serra Azul é fictício, construído com dados e características realistas do setor lácteo de Mato Grosso.</p></div>`;
 }
 const NAV=[
   ['Visão geral','',[['painel','Painel executivo'],['projeto','Projeto e roteiro'],['integrado','Plano integrado']]],
