@@ -5,7 +5,7 @@
  "description": "ERP didático do projeto Empreende BB: pizzaria simulada.",
  "lang": "pt-BR",
  "start_url": "./pizzaria.html",
- "scope": "./",
+ "scope": "./pizzaria",
  "display": "standalone",
  "background_color": "#F6F1E8",
  "theme_color": "#A23B22",
