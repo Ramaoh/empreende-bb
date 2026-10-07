@@ -5,7 +5,7 @@
  "description": "ERP didático do projeto Empreende BB: empresa simulada de doces.",
  "lang": "pt-BR",
  "start_url": "./index.html",
- "scope": "./",
+ "scope": "./index.html",
  "display": "standalone",
  "background_color": "#F2F4EC",
  "theme_color": "#2D5B45",
