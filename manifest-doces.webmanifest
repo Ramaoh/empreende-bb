@@ -1,0 +1,30 @@
+{
+ "id": "./index.html",
+ "name": "ERP Empreende BB",
+ "short_name": "Empreende BB",
+ "description": "ERP didático do projeto Empreende BB: empresa simulada de doces.",
+ "lang": "pt-BR",
+ "start_url": "./index.html",
+ "scope": "./",
+ "display": "standalone",
+ "background_color": "#F2F4EC",
+ "theme_color": "#2D5B45",
+ "icons": [
+  {
+   "src": "icone-doces-192.png",
+   "sizes": "192x192",
+   "type": "image/png"
+  },
+  {
+   "src": "icone-doces-512.png",
+   "sizes": "512x512",
+   "type": "image/png"
+  },
+  {
+   "src": "icone-doces-maskable.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  }
+ ]
+}

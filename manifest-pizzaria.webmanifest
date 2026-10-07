@@ -1,0 +1,30 @@
+{
+ "id": "./pizzaria.html",
+ "name": "ERP Pizzaria Empreende BB",
+ "short_name": "ERP Pizzaria",
+ "description": "ERP didático do projeto Empreende BB: pizzaria simulada.",
+ "lang": "pt-BR",
+ "start_url": "./pizzaria.html",
+ "scope": "./",
+ "display": "standalone",
+ "background_color": "#F6F1E8",
+ "theme_color": "#A23B22",
+ "icons": [
+  {
+   "src": "icone-pizzaria-192.png",
+   "sizes": "192x192",
+   "type": "image/png"
+  },
+  {
+   "src": "icone-pizzaria-512.png",
+   "sizes": "512x512",
+   "type": "image/png"
+  },
+  {
+   "src": "icone-pizzaria-maskable.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  }
+ ]
+}
