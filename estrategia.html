@@ -3,16 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>AgroEstratégia</title>
 <link rel="manifest" href="manifest-estrategia.webmanifest">
 <meta name="theme-color" content="#23425F">
 <link rel="icon" type="image/png" href="icone-estrategia-192.png">
 <link rel="apple-touch-icon" href="icone-estrategia-192.png">
+<title>AgroEstratégia</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
-/* Layout: sala do conselho de uma agroindústria. Menu lateral em trilhas (Simulação · Unidade I · II · III · Relatório), barra superior com ano e indicadores-chave, conteúdo em painéis. */
+/* Layout: sala do conselho de uma agroindústria. Menu lateral em trilhas (Simulação · Parte I · Parte II · Relatório), barra superior com ano e indicadores-chave, conteúdo em painéis. */
 :root{
   --bg:#F3F3EF; --surface:#FFFFFF; --surface2:#E9EAE3; --ink:#18212B; --muted:#5B6570; --line:#D5D8D0;
   --brand:#23425F; --brand-bg:#DCE5EE; --on-brand:#FFFFFF; --accent:#B87613; --accent-bg:#F6E7C9;
@@ -509,7 +509,7 @@ function alertasExec(){
 function vPainel(){
   const h=S.hist,u=ult(),p=previa(),k=u?u.kpi:p.kpi,base=u?'último ano encerrado':'prévia do ano 1';
   const prog=progressoPlano();
-  return head(`Ano ${S.ano} · ${ANO0+S.ano-1}${S.ano>HORIZONTE?' · além do horizonte do plano':''}`,`Painel executivo · ${esc(S.empresa.nome||'Agroindústria')}`,`Visão do conselho: resultados nas quatro perspectivas do BSC (${base}). As decisões são tomadas em Decisões do ano e o plano estratégico é construído nas trilhas das Unidades I, II e III.`)+
+  return head(`Ano ${S.ano} · ${ANO0+S.ano-1}${S.ano>HORIZONTE?' · além do horizonte do plano':''}`,`Painel executivo · ${esc(S.empresa.nome||'Agroindústria')}`,`Visão do conselho: resultados nas quatro perspectivas do BSC (${base}). As decisões são tomadas em Decisões do ano e o plano estratégico é construído nas trilhas da Parte I (diagnóstico e formulação) e da Parte II (implementação).`)+
   `<div class="grid2"><div style="display:flex;flex-direction:column;gap:10px">${noticias(S.eventos,true)}</div>
    <div class="panel"><h2>Rotina de cada ano</h2>${steps(['Ler o cenário','Atualizar o diagnóstico','Decidir','Conferir a prévia','Encerrar o ano','Controlar os KPIs'])}
    <p class="sub">A cada rodada, o grupo atua como conselho de administração: analisa o ambiente (PESTEL e Porter), revisa a estratégia, decide e acompanha os indicadores do BSC.</p>
@@ -556,7 +556,7 @@ function vDecisoes(){
 }
 function vMercados(){
   const p=ult()?ult().P:previa().P,fonte=ult()?`resultado de ${ult().anoCal}`:'prévia do ano 1',items=Object.values(p).map(x=>({nome:x.nome,g:x.g,rs:x.rs,rec:x.rev})),gCut=S.plano.gCut??0.06;
-  return head('Simulação','Mercados e portfólio',`Tamanho, crescimento e participação de cada linha (${fonte}). A matriz BCG é calculada com esses dados e pode ser usada na Unidade II.`)+
+  return head('Simulação','Mercados e portfólio',`Tamanho, crescimento e participação de cada linha (${fonte}). A matriz BCG é calculada com esses dados e pode ser usada na Parte I (formulação).`)+
   `<div class="tbl"><table><thead><tr><th>Linha</th><th class="n">Mercado acessível</th><th class="n">Crescimento</th><th class="n">Participação</th><th class="n">Part. relativa</th><th class="n">Vendas</th><th class="n">Receita</th><th class="n">Margem de contribuição</th><th>BCG</th></tr></thead><tbody>
   ${Object.values(p).map(x=>{const cl=bcgClasse(x.g,x.rs,gCut);return `<tr><td><b>${esc(x.nome)}</b></td><td class="n">${num(x.A)} ${x.un}</td><td class="n">${pct(x.g)}</td><td class="n">${pct(x.s)}</td><td class="n">${num(x.rs,2)}×</td><td class="n">${num(x.V)}</td><td class="n">${mil(x.rev)}</td><td class="n">${mil(x.mc)} · ${pct(x.rev?x.mc/x.rev:0,0)}</td><td><span class="pill ${cl==='Estrela'?'good':cl==='Vaca leiteira'?'brand':cl==='Abacaxi'?'bad':'warn'}">${cl}</span></td></tr>`}).join('')}</tbody></table></div>
   <div class="panel"><h2>Matriz BCG da Serra Azul</h2><p class="sub">Círculos proporcionais à receita. Linha de corte do crescimento: ${pct(gCut,0)} (ajustável em BCG e Ansoff).</p>${bcgSVG(items,{gCut})}</div>
@@ -611,7 +611,7 @@ function vFinancas(){
    <div class="panel"><h2>Lucro líquido e caixa</h2>${barras([{n:'Lucro líquido',c:'var(--brand)',v:h.map(x=>x.dre.ll)},{n:'Caixa',c:'var(--q2)',v:h.map(x=>x.bal.caixa)}],h.map(x=>String(x.anoCal)),{aria:'Lucro líquido e caixa'})}</div></div>`;
 }
 function vCenario(){
-  return head('Simulação','Cenário PESTEL','Notícias do ambiente de cada ano. Elas alimentam a análise PESTEL e as Cinco Forças da Unidade I.')+
+  return head('Simulação','Cenário PESTEL','Notícias do ambiente de cada ano. Elas alimentam a análise PESTEL e as Cinco Forças da Parte I.')+
   `<div class="kpis">${kpi('Selic',pct(S.sim.selic))}${kpi('Preço de mercado do leite',`R$ ${num(S.sim.leitePreco,2)}/L`)}${kpi('Inflação acumulada',pct(S.sim.inflF-1))}</div>
   <div class="panel"><h2>Ano ${ANO0+S.ano-1} (atual)</h2>${noticias(S.eventos,true)}</div>
   ${S.hist.slice().reverse().map(r=>`<div class="panel"><h2>${r.anoCal}</h2>${noticias(r.eventos,true)}</div>`).join('')}`;
@@ -659,16 +659,15 @@ function progressoPlano(){
   const it3=[P.bsc.length>=8,P.bsc.reduce((a,o)=>a+(o.causa||[]).length,0)>=4,P.bsc.filter(o=>o.ind&&o.formula&&o.resp&&o.meta).length>=6,P.bsc.filter(o=>o.smart&&Object.values(o.smart).every(Boolean)).length>=4,P.w2h.length>=4,!!(P.controle.periodicidade&&P.controle.desvios)];
   const pf=[!!(P.mkt&&P.mkt.posicionamento),!!(P.rh&&P.rh.competencias),!!(P.prod&&P.prod.estrategia),!!(P.fin&&P.fin.estrutura)];
   const sum=a=>a.filter(Boolean).length/a.length;
-  return [{n:'Unidade I · Diagnóstico',p:sum(it1),d:'11/09/2026'},{n:'Unidade II · Formulação',p:sum(it2),d:'23/10/2026'},{n:'Unidade III · Implementação',p:sum(it3),d:'27/11/2026'},{n:'Planos funcionais',p:sum(pf),d:'com a Unidade III'}];
+  return [{n:'Parte I · Diagnóstico',p:sum(it1),d:'23/10/2026'},{n:'Parte I · Formulação',p:sum(it2),d:'23/10/2026'},{n:'Parte II · Implementação',p:sum(it3),d:'27/11/2026'},{n:'Planos funcionais',p:sum(pf),d:'com a Parte II'}];
 }
 function vProjeto(){
   const g=S.grupo;
   return head('Visão geral','Projeto e roteiro','Projeto Aplicado de Planejamento Estratégico em uma Agroindústria · Engenharia de Produção Agroindustrial · UNEMAT, Campus Barra do Bugres · Turma 2026/2')+
   `<div class="panel"><h2>Grupo</h2><div class="fields"><label>Nome do grupo${inp('grupo.nome',{ph:'Ex.: Grupo 3'})}</label><label class="wide">Integrantes${inp('grupo.integrantes',{ph:'Nomes completos, separados por vírgula'})}</label><label>Turma${inp('grupo.turma')}</label></div></div>
   <div class="grid2"><div class="panel"><h2>Cronograma de entregas</h2><div class="tbl"><table><thead><tr><th>Etapa</th><th>Conteúdo</th><th>Prazo</th></tr></thead><tbody>
-   <tr><td><b>Unidade I</b></td><td class="small">Caracterização, fundamentação, identidade, PESTEL, Cinco Forças, diagnóstico interno, SWOT. Texto em Word e vídeo.</td><td>11/09/2026</td></tr>
-   <tr><td><b>Unidade II</b></td><td class="small">Revisão da Unidade I, SWOT cruzada, BCG, estratégias competitivas, estratégia de produção, objetivos e GUT. Texto em Word e vídeo.</td><td>23/10/2026</td></tr>
-   <tr><td><b>Unidade III</b></td><td class="small">Projeto completo: BSC, mapa estratégico, KPIs, metas SMART, 5W2H, controle e considerações finais. Seminário de até 20 minutos.</td><td>27/11/2026</td></tr></tbody></table></div>
+   <tr><td><b>Parte I</b><br><span class="small muted">Unidades I e II</span></td><td class="small"><b>Diagnóstico:</b> caracterização, fundamentação, identidade, PESTEL, Cinco Forças, diagnóstico interno e SWOT. <b>Formulação:</b> SWOT cruzada, BCG e Ansoff, estratégias competitivas, estratégia de produção, objetivos e GUT. Texto em Word e vídeo.</td><td>23/10/2026</td></tr>
+   <tr><td><b>Parte II</b><br><span class="small muted">Unidade III</span></td><td class="small">Projeto completo: BSC, mapa estratégico, KPIs, metas SMART, 5W2H, controle, planos funcionais e considerações finais. Seminário de até 20 minutos.</td><td>27/11/2026</td></tr></tbody></table></div>
    <p class="small muted">Envio: ramaohumberto@unemat.br</p></div>
    <div class="panel"><h2>Agroindústria analisada</h2><p class="sub">O plano pode ser feito sobre o caso simulado (Laticínios Serra Azul), cujos números vêm da simulação, ou sobre uma agroindústria real escolhida pelo grupo. As ferramentas são as mesmas.</p>
     <div class="form"><button class="btn ${S.modo==='sim'?'pri':''}" type="button" data-act="modo" data-v="sim">Caso simulado: Laticínios Serra Azul</button><button class="btn ${S.modo==='real'?'pri':''}" type="button" data-act="modo" data-v="real">Agroindústria real do grupo</button></div>
@@ -689,14 +688,14 @@ function fluxoSVG(L){
 }
 function vCaracterizacao(){
   const F=[['nome','Nome da organização'],['localizacao','Localização'],['historico','Histórico',1],['porte','Porte'],['produtos','Produtos e/ou serviços',1],['capacidade','Capacidade produtiva'],['colaboradores','Número aproximado de colaboradores'],['mercados','Mercados atendidos'],['clientes','Principais clientes ou segmentos',1],['fornecedores','Principais fornecedores',1],['materias','Matérias-primas utilizadas',1],['processo','Processo produtivo básico (texto)',1],['concorrentes','Principais concorrentes',1],['cadeia','Características da cadeia produtiva (antes e depois da porteira, agentes, coordenação)',1]];
-  return head('Unidade I · Diagnóstico','Caracterização da agroindústria e do processo','Conheça a organização e a sua inserção no sistema agroindustrial. O fluxograma simplificado do processo é desenhado automaticamente a partir das etapas.')+
+  return head('Parte I · Diagnóstico','Caracterização da agroindústria e do processo','Conheça a organização e a sua inserção no sistema agroindustrial. O fluxograma simplificado do processo é desenhado automaticamente a partir das etapas.')+
   `<div class="panel"><h2>Caracterização</h2><div class="fields">${F.map(([k,l,a])=>`<label class="${a?'wide':''}">${l}${inp('empresa.'+k,{type:a?'area':'text',rows:2})}</label>`).join('')}</div></div>
   <div class="grid2"><div class="panel"><h2>Etapas do processo produtivo</h2>${tabela('plano.fluxo',[{k:'etapa',l:'Etapa',w:220,r:1},{k:'obs',l:'Observação (ex.: PCC, resíduo)',w:140}],'fluxo',{num:1,add:'Adicionar etapa'})}</div>
   <div class="panel"><h2>Fluxograma simplificado</h2>${fluxoSVG(S.plano.fluxo)}</div></div>
-  <div class="panel soft"><h2>Fundamentação teórica da Unidade I</h2><p class="sub">Conceito de planejamento e de estratégia, planejamento estratégico, níveis estratégico, tático e operacional, importância para organizações agroindustriais, organização como sistema e particularidades do sistema agroindustrial (sazonalidade, perecibilidade, dependência de fornecedores rurais, coordenação da cadeia).</p>${inp('plano.fundTeoria.u1',{type:'area',rows:8,ph:'Texto da fundamentação teórica, com citações (AUTOR, ano) e referências ABNT.'})}</div>`;
+  <div class="panel soft"><h2>Fundamentação teórica da Parte I: planejamento e diagnóstico</h2><p class="sub">Conceito de planejamento e de estratégia, planejamento estratégico, níveis estratégico, tático e operacional, importância para organizações agroindustriais, organização como sistema e particularidades do sistema agroindustrial (sazonalidade, perecibilidade, dependência de fornecedores rurais, coordenação da cadeia).</p>${inp('plano.fundTeoria.u1',{type:'area',rows:8,ph:'Texto da fundamentação teórica, com citações (AUTOR, ano) e referências ABNT.'})}</div>`;
 }
 function vIdentidade(){
-  return head('Unidade I · Diagnóstico','Identidade organizacional','Missão: por que a organização existe? Visão: onde pretende chegar e quando? Valores: que princípios orientam as decisões? Se a empresa já tem esses elementos, apresente-os e faça a análise crítica.')+
+  return head('Parte I · Diagnóstico','Identidade organizacional','Missão: por que a organização existe? Visão: onde pretende chegar e quando? Valores: que princípios orientam as decisões? Se a empresa já tem esses elementos, apresente-os e faça a análise crítica.')+
   `<div class="panel"><div class="fields"><label class="wide">Missão${inp('plano.identidade.missao',{type:'area',ph:'Ex.: Transformar o leite dos produtores do Médio Paraguai em alimentos seguros e saborosos, gerando renda no campo e valor para os cooperados.'})}</label>
   <label class="wide">Visão (com horizonte de tempo)${inp('plano.identidade.visao',{type:'area',ph:'Ex.: Ser, até 2031, o laticínio mais rentável e sustentável do Centro-Oeste, com 20% da receita em produtos de alto valor.'})}</label>
   <label class="wide">Valores${inp('plano.identidade.valores',{type:'area',ph:'Ex.: Segurança dos alimentos; respeito ao produtor; ética; inovação; responsabilidade ambiental.'})}</label>
@@ -707,7 +706,7 @@ function vIdentidade(){
 function vPestel(){
   const L=S.plano.pestel,cnt={};L.forEach(x=>{cnt[x.dim]=(cnt[x.dim]||0)+1});
   const top=[...L].map((x,i)=>({...x,i,score:(+x.imp||0)*(+x.prob||0)})).sort((a,b)=>b.score-a.score).slice(0,6);
-  return head('Unidade I · Diagnóstico','Análise PESTEL','Fatores do macroambiente: Políticos, Econômicos, Sociais, Tecnológicos, Ecológicos/Ambientais e Legais. Para cada fator, indique a tendência, se é oportunidade ou ameaça, o impacto e a probabilidade.')+
+  return head('Parte I · Diagnóstico','Análise PESTEL','Fatores do macroambiente: Políticos, Econômicos, Sociais, Tecnológicos, Ecológicos/Ambientais e Legais. Para cada fator, indique a tendência, se é oportunidade ou ameaça, o impacto e a probabilidade.')+
   `<div class="kpis">${Object.entries(DIM).map(([k,v])=>kpi(v,num(cnt[k]||0),'fatores',cnt[k]?'':'bad')).join('')}</div>
   <div class="panel"><h2>Fatores do ambiente externo</h2><p class="sub">As notícias da simulação podem ser trazidas para cá com o botão "Levar para a análise PESTEL" (Painel ou Cenário PESTEL).</p>
   ${tabela('plano.pestel',[{k:'dim',l:'Dimensão',t:'sel',opts:Object.entries(DIM),r:1,w:120},{k:'fator',l:'Fator (acontecimento ou condição)',t:'area',w:220},{k:'tend',l:'Tendência e efeito na agroindústria',t:'area',w:220},{k:'tipo',l:'O/A',t:'sel',opts:[['O','Oportunidade'],['A','Ameaça']],r:1,w:120},{k:'imp',l:'Impacto',t:'sel',opts:NOTA,r:1},{k:'prob',l:'Probab.',t:'sel',opts:NOTA,r:1}],'pestel',{add:'Adicionar fator',extra:{l:'Relevância',f:x=>`<b class="num">${(+x.imp||0)*(+x.prob||0)}</b>`}})}</div>
@@ -726,7 +725,7 @@ function radarSVG(vals,labels){
 }
 function vPorter(){
   const P=S.plano.porter,ks=Object.keys(PORTER),med=ks.reduce((a,k)=>a+(+P[k].n||0),0)/ks.length;
-  return head('Unidade I · Diagnóstico','Cinco Forças de Porter','Avalie a intensidade de cada força competitiva no setor da agroindústria e justifique. Forças intensas reduzem a rentabilidade média do setor.')+
+  return head('Parte I · Diagnóstico','Cinco Forças de Porter','Avalie a intensidade de cada força competitiva no setor da agroindústria e justifique. Forças intensas reduzem a rentabilidade média do setor.')+
   `<div class="grid2"><div class="panel">${ks.map(k=>`<div style="display:flex;flex-direction:column;gap:6px;border-bottom:1px dashed var(--line);padding-bottom:10px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap"><h3>${PORTER[k][0]}</h3>${inp(`plano.porter.${k}.n`,{type:'sel',opts:NIVEL,r:1})}</div><p class="small muted">Considere: ${PORTER[k][1]}</p>${inp(`plano.porter.${k}.j`,{type:'area',rows:2,ph:'Justificativa com evidências'})}</div>`).join('')}</div>
   <div class="panel"><h2>Intensidade das forças</h2>${radarSVG(ks.map(k=>+P[k].n||0),ks.map(k=>PORTER[k][0].replace('Ameaça de ','').replace('Poder dos ','').replace(' entre concorrentes','')))}
    <div class="alert ${med>=3.5?'bad':med>=2.5?'warn':'good'}"><b>Atratividade do setor</b><span>Média das forças: ${num(med,1)} de 5. ${med>=3.5?'Setor pouco atrativo: a rentabilidade média tende a ser baixa e a diferenciação é essencial.':med>=2.5?'Atratividade moderada.':'Setor atrativo.'}</span></div></div></div>
@@ -736,7 +735,7 @@ const AREAS=[['producao','Produção'],['tecnologia','Tecnologia'],['qualidade',
 function evidSim(k){const u=ult()||previa(),c=u.cap||S.sim.capab,K=u.kpi;return {producao:`OEE ${pct(K.oee)}, utilização ${pct(K.util,0)}`,tecnologia:`Maturidade digital ${num(c.dig)}/100`,qualidade:`Índice de qualidade ${num(c.qual)}/100; leite ${num(K.qLeite)}/100`,rh:`Capacitação ${num(c.pes)}/100; ${num(K.treino,1)} h de treino por colaborador`,logistica:`Nível de serviço ${pct(K.fill,0)}`,suprimentos:`Captação ${num(K.captacao)} mil L; ${pct(K.afPct,0)} de agricultores familiares`,custos:`Leite = ${pct(K.custoLeitePct,0)} da receita; perdas ${pct(K.perdas)}`,marketing:`Marketing ${num(c.mkt)}/100; participação ${pct(K.share)}`,financas:`Margem EBITDA ${pct(K.margemEbitda)}; dívida/EBITDA ${K.divEbitda==null?'—':num(K.divEbitda,1)}`,inovacao:`Inovação ${num(c.inov)}/100; ${pct(K.novosPct)} da receita em novos produtos`,sustentabilidade:`ESG ${num(c.esg)}/100; soro valorizado ${pct(K.soroVal,0)}`,informacao:`Digitalização ${num(c.dig)}/100`}[k]}
 function vInterno(){
   const I=S.plano.interno;AREAS.forEach(([k])=>{if(!I[k])I[k]={nota:3,tipo:'N',ev:''}});
-  return head('Unidade I · Diagnóstico','Diagnóstico interno e VRIO','Recursos e capacidades da organização em cada área. Atribua uma nota, classifique como força ou fraqueza e registre a evidência. No caso simulado, a coluna "Dado da simulação" ajuda a fundamentar.')+
+  return head('Parte I · Diagnóstico','Diagnóstico interno e VRIO','Recursos e capacidades da organização em cada área. Atribua uma nota, classifique como força ou fraqueza e registre a evidência. No caso simulado, a coluna "Dado da simulação" ajuda a fundamentar.')+
   `<div class="panel"><div class="tbl"><table><thead><tr><th>Área</th><th>Nota (1–5)</th><th>Classificação</th><th style="min-width:260px">Evidência e justificativa</th>${S.modo==='sim'?'<th>Dado da simulação</th>':''}</tr></thead><tbody>
   ${AREAS.map(([k,n])=>`<tr><td><b>${n}</b></td><td>${inp(`plano.interno.${k}.nota`,{type:'sel',opts:NOTA,r:1})}</td><td>${inp(`plano.interno.${k}.tipo`,{type:'sel',opts:[['F','Força'],['Fq','Fraqueza'],['N','Neutro']],r:1})}</td><td>${inp(`plano.interno.${k}.ev`,{type:'area',rows:2})}</td>${S.modo==='sim'?`<td class="small muted">${evidSim(k)}</td>`:''}</tr>`).join('')}</tbody></table></div></div>
   <div class="panel"><h2>Análise VRIO dos recursos-chave</h2><p class="sub">Um recurso gera vantagem competitiva sustentável quando é Valioso, Raro, difícil de Imitar e quando a Organização está preparada para explorá-lo (Barney).</p>
@@ -746,19 +745,19 @@ function vInterno(){
 function vSwot(){
   const L=S.plano.swot,q=[['f','Forças','Ambiente interno'],['fq','Fraquezas','Ambiente interno'],['o','Oportunidades','Ambiente externo'],['a','Ameaças','Ambiente externo']];
   const quad=([k,t,s])=>`<div class="swq ${k}"><h3>${t}<span class="small muted" style="font-family:var(--f-body);font-weight:400">${s}</span></h3>${L.map((x,i)=>x.q===k?`<div class="swi"><div style="display:flex;flex-direction:column;gap:4px">${inp(`plano.swot.${i}.t`,{ph:'Fator'})}${inp(`plano.swot.${i}.j`,{type:'area',rows:2,ph:'Justificativa: por que é relevante?'})}<span class="src">${x.src==='pestel'?'veio do PESTEL':x.src==='interno'?'veio do diagnóstico interno':'adicionado manualmente'}</span></div><button class="btn sm ghost danger" type="button" data-act="del" data-path="plano.swot" data-i="${i}" aria-label="Remover">✕</button></div>`:'').join('')}<div><button class="btn sm" type="button" data-act="addSwot" data-q="${k}">Adicionar</button></div></div>`;
-  return head('Unidade I · Diagnóstico','Matriz SWOT','Síntese do diagnóstico: forças e fraquezas (internas), oportunidades e ameaças (externas). Não basta listar: justifique cada elemento.')+
+  return head('Parte I · Diagnóstico','Matriz SWOT','Síntese do diagnóstico: forças e fraquezas (internas), oportunidades e ameaças (externas). Não basta listar: justifique cada elemento.')+
   `<div class="form"><button class="btn pri" type="button" data-act="importSwot">Importar do PESTEL e do diagnóstico interno</button><span class="small muted" style="padding-bottom:8px">Traz os fatores PESTEL com relevância ≥ 12 e as áreas classificadas como força ou fraqueza, sem duplicar.</span></div>
   <div class="swot">${q.map(quad).join('')}</div>
-  <div class="panel soft"><h2>Síntese do diagnóstico</h2><p class="sub">Principais problemas, oportunidades e desafios estratégicos identificados (resultado esperado da Unidade I).</p>${inp('plano.sinteseU1',{type:'area',rows:5})}</div>
-  ${fund('swot','Matriz SWOT',['Matriz que cruza fatores internos (forças e fraquezas) e externos (oportunidades e ameaças).','Sintetizar o diagnóstico estratégico.','Organizam-se os fatores em quatro quadrantes, com justificativa.','Integra PESTEL, Porter e diagnóstico interno numa visão única.','É a base da SWOT cruzada na Unidade II.'])}`;
+  <div class="panel soft"><h2>Síntese do diagnóstico</h2><p class="sub">Principais problemas, oportunidades e desafios estratégicos identificados (resultado esperado do diagnóstico, na Parte I).</p>${inp('plano.sinteseU1',{type:'area',rows:5})}</div>
+  ${fund('swot','Matriz SWOT',['Matriz que cruza fatores internos (forças e fraquezas) e externos (oportunidades e ameaças).','Sintetizar o diagnóstico estratégico.','Organizam-se os fatores em quatro quadrantes, com justificativa.','Integra PESTEL, Porter e diagnóstico interno numa visão única.','É a base da SWOT cruzada, na formulação.'])}`;
 }
-/* ---------- Unidade II ---------- */
+/* ---------- Parte I · Formulação ---------- */
 const TOWSQ={FO:['Forças × Oportunidades','Estratégias ofensivas','Como usar as forças para aproveitar as oportunidades?'],FA:['Forças × Ameaças','Estratégias de confronto','Como usar as forças para enfrentar as ameaças?'],FqO:['Fraquezas × Oportunidades','Estratégias de reforço','O que melhorar para aproveitar as oportunidades?'],FqA:['Fraquezas × Ameaças','Estratégias defensivas','Que vulnerabilidades reduzir para diminuir os riscos?']};
 function vTows(){
   const sw=S.plano.swot,opts=q=>[['','—']].concat(sw.filter(x=>x.q===q&&x.t).map(x=>[x.t,x.t.slice(0,60)]));
   const T=S.plano.tows;
-  return head('Unidade II · Formulação','SWOT cruzada','Cruze os quadrantes da SWOT para gerar alternativas estratégicas concretas. Cada alternativa pode seguir para a Matriz GUT.')+
-  (sw.length<4?'<div class="alert warn"><span>Complete a Matriz SWOT da Unidade I para usar os fatores aqui.</span></div>':'')+
+  return head('Parte I · Formulação','SWOT cruzada','Cruze os quadrantes da SWOT para gerar alternativas estratégicas concretas. Cada alternativa pode seguir para a Matriz GUT.')+
+  (sw.length<4?'<div class="alert warn"><span>Complete a Matriz SWOT do diagnóstico para usar os fatores aqui.</span></div>':'')+
   `<div class="swot">${Object.entries(TOWSQ).map(([k,[t,s,p]])=>{const a=k.startsWith('Fq')?'fq':'f',b=k.endsWith('O')?'o':'a';return `<div class="swq ${a==='f'?(b==='o'?'o':'f'):(b==='o'?'a':'fq')}"><h3>${t}<span class="pill brand">${s}</span></h3><p class="small muted">${p}</p>
   ${T.map((x,i)=>x.q===k?`<div class="swi"><div style="display:flex;flex-direction:column;gap:4px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">${inp(`plano.tows.${i}.f`,{type:'sel',opts:opts(a)})}${inp(`plano.tows.${i}.o`,{type:'sel',opts:opts(b)})}</div>${inp(`plano.tows.${i}.est`,{type:'area',rows:2,ph:'Alternativa estratégica (verbo no infinitivo + o quê + para quê)'})}</div><button class="btn sm ghost danger" type="button" data-act="del" data-path="plano.tows" data-i="${i}" aria-label="Remover">✕</button></div>`:'').join('')}
   <div><button class="btn sm" type="button" data-act="addTows" data-q="${k}">Adicionar alternativa</button></div></div>`}).join('')}</div>
@@ -770,7 +769,7 @@ function vPortfolio(){
   const fonte=S.modo==='sim'?'sim':'manual';
   const items=fonte==='sim'?Object.values((ult()||previa()).P).map(x=>({nome:x.nome,g:x.g,rs:x.rs,rec:x.rev})):P.port.map(x=>({nome:x.nome||'Produto',g:(+x.g||0)/100,rs:+x.rs||0.1,rec:+x.rec||1}));
   const A=P.ansoff=P.ansoff||{};
-  return head('Unidade II · Formulação','Portfólio: Matriz BCG e Matriz de Ansoff','A BCG posiciona cada produto ou unidade de negócio pelo crescimento do mercado e pela participação relativa. A matriz de Ansoff organiza as opções de crescimento.')+
+  return head('Parte I · Formulação','Portfólio: Matriz BCG e Matriz de Ansoff','A BCG posiciona cada produto ou unidade de negócio pelo crescimento do mercado e pela participação relativa. A matriz de Ansoff organiza as opções de crescimento.')+
   `<div class="panel"><div class="form"><label>Linha de corte do crescimento (%)<input type="number" min="0" max="30" step="0.5" value="${r1(gCut*100)}" data-k="plano.gCut" data-pct="1" data-r="1" id="gcut"></label><span class="small muted" style="padding-bottom:8px">${fonte==='sim'?'Dados: simulação ('+(ult()?'último ano encerrado':'prévia')+').':'Dados informados pelo grupo (modo agroindústria real).'}</span></div>
   ${bcgSVG(items,{gCut,id:'svgBcg'})}
   <div class="tbl"><table><thead><tr><th>Produto</th><th class="n">Crescimento</th><th class="n">Part. relativa</th><th>Classificação</th></tr></thead><tbody>${items.map(i=>`<tr><td>${esc(i.nome)}</td><td class="n">${pct(i.g)}</td><td class="n">${num(i.rs,2)}×</td><td>${bcgClasse(i.g,i.rs,gCut)}</td></tr>`).join('')}</tbody></table></div>
@@ -783,7 +782,7 @@ const COMPET=[['custo','Liderança em custos'],['dif','Diferenciação'],['enfoq
 function vCompetitiva(){
   const C=S.plano.competitiva;COMPET.forEach(([k])=>{if(!C[k])C[k]={n:3,j:''}});
   const rank=COMPET.map(([k,n])=>({k,n,v:+C[k].n||0})).sort((a,b)=>b.v-a.v);
-  return head('Unidade II · Formulação','Estratégias competitivas','Avalie a aderência de cada posicionamento ao diagnóstico e escolha o posicionamento principal (Porter: custo, diferenciação ou enfoque), combinado com outras orientações.')+
+  return head('Parte I · Formulação','Estratégias competitivas','Avalie a aderência de cada posicionamento ao diagnóstico e escolha o posicionamento principal (Porter: custo, diferenciação ou enfoque), combinado com outras orientações.')+
   `<div class="panel"><div class="tbl"><table><thead><tr><th>Posicionamento</th><th>Aderência (1–5)</th><th style="min-width:300px">Fundamentação no diagnóstico</th></tr></thead><tbody>${COMPET.map(([k,n])=>`<tr><td><b>${n}</b></td><td>${inp(`plano.competitiva.${k}.n`,{type:'sel',opts:NOTA,r:1})}</td><td>${inp(`plano.competitiva.${k}.j`,{type:'area',rows:2})}</td></tr>`).join('')}</tbody></table></div>
   <div class="fields"><label>Posicionamento principal${inp('plano.competitiva.principal',{type:'sel',opts:[['','Escolha']].concat(COMPET),r:1})}</label><label class="wide">Declaração da estratégia competitiva${inp('plano.competitiva.declaracao',{type:'area',ph:'Ex.: Diferenciação por qualidade e origem (leite da agricultura familiar do cerrado), com eficiência de custos nas linhas de commodity e agregação de valor ao soro.'})}</label></div>
   <p class="small muted">Maior aderência: ${rank.slice(0,3).map(x=>`${x.n} (${x.v})`).join(', ')}.</p></div>
@@ -804,7 +803,7 @@ function matrizSlackSVG(L){
 function vProducao(){
   const Pp=S.plano.producao;PRIO.forEach(([k])=>{if(!Pp[k])Pp[k]={imp:5,des:5,j:''}});
   const L=PRIO.map(([k,n])=>({k,n,imp:+Pp[k].imp,des:+Pp[k].des}));
-  return head('Unidade II · Formulação','Estratégia de produção','Relacione a estratégia competitiva com a função produção. Use a matriz importância × desempenho (Slack): importância do critério para os clientes (1 = pouco, 9 = muito) e desempenho em relação aos concorrentes (1 = muito pior, 9 = muito melhor).')+
+  return head('Parte I · Formulação','Estratégia de produção','Relacione a estratégia competitiva com a função produção. Use a matriz importância × desempenho (Slack): importância do critério para os clientes (1 = pouco, 9 = muito) e desempenho em relação aos concorrentes (1 = muito pior, 9 = muito melhor).')+
   `<div class="grid2"><div class="panel"><div class="tbl"><table><thead><tr><th>Prioridade competitiva</th><th>Importância</th><th>Desempenho</th><th>Zona</th></tr></thead><tbody>${L.map(x=>{const z=zonaSlack(x.imp,x.des);return `<tr><td><b>${x.n}</b></td><td>${inp(`plano.producao.${x.k}.imp`,{type:'sel',opts:[1,2,3,4,5,6,7,8,9].map(v=>[v,v]),r:1})}</td><td>${inp(`plano.producao.${x.k}.des`,{type:'sel',opts:[1,2,3,4,5,6,7,8,9].map(v=>[v,v]),r:1})}</td><td><span class="pill ${z[0]}">${z[1]}</span></td></tr>`}).join('')}</tbody></table></div></div>
   <div class="panel">${matrizSlackSVG(L)}</div></div>
   <div class="panel"><label class="small muted" style="font-weight:700">Como a produção contribui para a estratégia competitiva${inp('plano.producaoTexto',{type:'area',rows:5,ph:'Ex.: A diferenciação por qualidade exige controle do leite na origem (fomento), rastreabilidade digital e redução de perdas; o custo nas linhas UHT e muçarela depende de OEE e rendimento.'})}</label></div>
@@ -812,15 +811,15 @@ function vProducao(){
 }
 const AREASOBJ=['Mercado','Produção','Qualidade','Custos','Logística','Pessoas','Tecnologia','Inovação','Sustentabilidade','Econômico-financeiro'];
 function vObjetivos(){
-  return head('Unidade II · Formulação','Objetivos estratégicos','Defina aonde a agroindústria quer chegar em cada área. Objetivos começam com verbo e são qualitativos; as metas numéricas vêm no BSC e nas metas SMART.')+
+  return head('Parte I · Formulação','Objetivos estratégicos','Defina aonde a agroindústria quer chegar em cada área. Objetivos começam com verbo e são qualitativos; as metas numéricas vêm no BSC e nas metas SMART.')+
   `<div class="panel">${tabela('plano.objetivos',[{k:'area',l:'Área',t:'sel',opts:AREASOBJ.map(a=>[a,a]),w:150},{k:'texto',l:'Objetivo estratégico',t:'area',w:340}],'objetivo',{num:1,add:'Adicionar objetivo'})}
   <div class="form"><button class="btn" type="button" data-act="objBsc">Levar objetivos para o BSC</button></div></div>
-  <div class="panel soft"><h2>Resultado esperado da Unidade II</h2><p class="sub">Onde a agroindústria pretende chegar e quais estratégias deverá adotar para alcançar essa posição?</p>${inp('plano.sinteseU2',{type:'area',rows:5})}</div>
-  <div class="panel soft"><h2>Fundamentação teórica da Unidade II</h2><p class="sub">Formulação estratégica, escolas da estratégia (Mintzberg), vantagem competitiva, estratégias competitivas, opções estratégicas, estratégia de produção e tomada de decisão.</p>${inp('plano.fundTeoria.u2',{type:'area',rows:8})}</div>`;
+  <div class="panel soft"><h2>Resultado esperado da Parte I</h2><p class="sub">Onde a agroindústria pretende chegar e quais estratégias deverá adotar para alcançar essa posição?</p>${inp('plano.sinteseU2',{type:'area',rows:5})}</div>
+  <div class="panel soft"><h2>Fundamentação teórica da Parte I: formulação</h2><p class="sub">Formulação estratégica, escolas da estratégia (Mintzberg), vantagem competitiva, estratégias competitivas, opções estratégicas, estratégia de produção e tomada de decisão.</p>${inp('plano.fundTeoria.u2',{type:'area',rows:8})}</div>`;
 }
 function vGut(){
   const L=S.plano.gut.map((x,i)=>({...x,i,p:(+x.g||0)*(+x.u||0)*(+x.t||0)})).sort((a,b)=>b.p-a.p);
-  return head('Unidade II · Formulação','Matriz GUT','Priorize as alternativas estratégicas por Gravidade, Urgência e Tendência (notas de 1 a 5). A prioridade é o produto G × U × T.')+
+  return head('Parte I · Formulação','Matriz GUT','Priorize as alternativas estratégicas por Gravidade, Urgência e Tendência (notas de 1 a 5). A prioridade é o produto G × U × T.')+
   `<div class="panel">${tabela('plano.gut',[{k:'alt',l:'Alternativa estratégica',t:'area',w:300},{k:'g',l:'G',t:'sel',opts:NOTA,r:1},{k:'u',l:'U',t:'sel',opts:NOTA,r:1},{k:'t',l:'T',t:'sel',opts:NOTA,r:1}],'gut',{add:'Adicionar alternativa',extra:{l:'G×U×T',f:x=>`<b class="num">${(+x.g||0)*(+x.u||0)*(+x.t||0)}</b>`}})}</div>
   <div class="panel"><h2>Ranking das prioridades</h2>${L.length?`<div class="tbl"><table><thead><tr><th class="n">#</th><th>Alternativa</th><th class="n">G×U×T</th><th></th></tr></thead><tbody>${L.map((x,k)=>`<tr><td class="n">${k+1}</td><td>${esc(x.alt)}</td><td class="n">${x.p}</td><td>${k<5?'<span class="pill good">prioritária</span>':''}</td></tr>`).join('')}</tbody></table></div>
   ${barras([{n:'G × U × T',c:'var(--accent)',v:L.slice(0,8).map(x=>x.p)}],L.slice(0,8).map((x,k)=>'#'+(k+1)),{fmt:v=>num(v),aria:'Ranking GUT'})}
@@ -828,7 +827,7 @@ function vGut(){
   <div class="guia"><div><b>Gravidade</b>1 sem gravidade · 5 extremamente grave</div><div><b>Urgência</b>1 pode esperar · 5 ação imediata</div><div><b>Tendência</b>1 não vai piorar · 5 piora rapidamente se nada for feito</div></div></div>
   ${fund('gut','Matriz GUT',['Ferramenta de priorização de Kepner e Tregoe.','Ordenar alternativas quando os recursos são limitados.','Notas de 1 a 5 para gravidade, urgência e tendência; o produto define o ranking.','Torna explícitos os critérios de escolha do grupo.','As prioridades viram objetivos do BSC e planos 5W2H.'])}`;
 }
-/* ---------- Unidade III ---------- */
+/* ---------- Parte II ---------- */
 const PLANOS={'':'—',mkt:'Marketing',rh:'Pessoas (RH)',prod:'Produção',fin:'Financeiro'};
 function objOpts(){return [['','—']].concat(S.plano.bsc.map(o=>[o.id,`${PERSP[o.persp].n.split(' ')[0]}: ${(o.obj||'(sem texto)').slice(0,60)}`]))}
 function vBsc(){
@@ -839,7 +838,7 @@ function vBsc(){
    <label>Meta (texto)${inp(`plano.bsc.${i}.meta`,{ph:'Ex.: 8% até 2031'})}</label><label>Meta numérica${inp(`plano.bsc.${i}.metaNum`,{ph:o.kpi&&KPICAT[o.kpi].t==='pct'?'em %, ex.: 8':'número',r:1})}</label><label>Sentido${inp(`plano.bsc.${i}.sentido`,{type:'sel',opts:[['max','Quanto maior, melhor'],['min','Quanto menor, melhor']],r:1})}</label><label>Plano funcional${inp(`plano.bsc.${i}.plano`,{type:'sel',opts:Object.entries(PLANOS),r:1})}</label></div>
    <label class="small muted" style="font-weight:700">Iniciativa estratégica${inp(`plano.bsc.${i}.inic`,{type:'area',rows:2})}</label>
    ${o.kpi?`<div class="row"><span>Situação atual (simulação)</span><b>${kfmtT(kpiAtual(o.kpi),KPICAT[o.kpi].t)}${farol(o)?` <span class="pill ${FAROL[farol(o)][0]}">${FAROL[farol(o)][1]}</span>`:''}</b></div>`:''}</div>`;
-  return head('Unidade III · Implementação','Balanced Scorecard','Para cada perspectiva: objetivo estratégico → indicador → meta → iniciativa (Kaplan e Norton). Ligue o indicador a um KPI da simulação para acompanhar a situação atual automaticamente.')+
+  return head('Parte II · Implementação','Balanced Scorecard','Para cada perspectiva: objetivo estratégico → indicador → meta → iniciativa (Kaplan e Norton). Ligue o indicador a um KPI da simulação para acompanhar a situação atual automaticamente.')+
   Object.entries(PERSP).map(([p,P])=>`<div class="panel"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap"><h2 style="color:${P.c}">Perspectiva ${P.n.toLowerCase()}</h2><button class="btn sm" type="button" data-act="addBsc" data-p="${p}">Adicionar objetivo</button></div>
   <div class="cards" style="grid-template-columns:repeat(auto-fill,minmax(min(100%,460px),1fr))">${B.map((o,i)=>o.persp===p?card(o,i):'').join('')||'<p class="empty">Nenhum objetivo nesta perspectiva.</p>'}</div></div>`).join('')+
   fund('bsc','Balanced Scorecard',['Sistema de gestão estratégica de Kaplan e Norton (1992, 1996).','Traduzir a estratégia em objetivos, indicadores, metas e iniciativas equilibrados.','Organiza a estratégia em quatro perspectivas ligadas por causa e efeito.','Evita olhar só o resultado financeiro e conecta pessoas, processos e clientes.','Cada objetivo do BSC vira KPI, meta SMART e plano de ação.']);
@@ -855,7 +854,7 @@ function mapaSVG(){
 }
 function vMapa(){
   const B=S.plano.bsc,ord={apr:0,proc:1,cli:2,fin:3};
-  return head('Unidade III · Implementação','Mapa estratégico','Relações de causa e efeito entre os objetivos: investimentos em pessoas, tecnologia e conhecimento melhoram os processos, que geram valor aos clientes e resultados financeiros.')+
+  return head('Parte II · Implementação','Mapa estratégico','Relações de causa e efeito entre os objetivos: investimentos em pessoas, tecnologia e conhecimento melhoram os processos, que geram valor aos clientes e resultados financeiros.')+
   `<div class="panel">${B.length?mapaSVG():'<p class="empty">Cadastre objetivos no Balanced Scorecard para desenhar o mapa.</p>'}</div>
   <div class="panel"><h2>Relações de causa e efeito</h2><p class="sub">Para cada objetivo, marque os objetivos das perspectivas superiores para os quais ele contribui.</p>
   ${B.filter(o=>o.persp!=='fin').map(o=>{const i=B.indexOf(o);const alvos=B.filter(t=>ord[t.persp]>ord[o.persp]);return `<div style="border-bottom:1px dashed var(--line);padding:8px 0"><b style="color:${PERSP[o.persp].c}">${esc(o.obj||'(sem texto)')}</b> <span class="small muted">contribui para:</span><div class="form" style="margin-top:4px">${alvos.map(t=>`<label class="chk small"><input type="checkbox" data-causa="${i}" data-t="${t.id}" ${(o.causa||[]).includes(t.id)?'checked':''}> ${esc((t.obj||'').slice(0,50))}</label>`).join('')||'<span class="small muted">Sem objetivos acima.</span>'}</div></div>`}).join('')||'<p class="empty">Sem objetivos.</p>'}</div>
@@ -863,7 +862,7 @@ function vMapa(){
 }
 function vKpis(){
   const B=S.plano.bsc;
-  return head('Unidade III · Implementação','Indicadores de desempenho (KPIs)','Ficha de cada indicador: nome, objetivo, fórmula, unidade, fonte, periodicidade, responsável, situação atual e meta. Indicadores ligados à simulação preenchem a situação atual e o semáforo.')+
+  return head('Parte II · Implementação','Indicadores de desempenho (KPIs)','Ficha de cada indicador: nome, objetivo, fórmula, unidade, fonte, periodicidade, responsável, situação atual e meta. Indicadores ligados à simulação preenchem a situação atual e o semáforo.')+
   (B.length?B.map((o,i)=>{const c=KPICAT[o.kpi],f=farol(o);return `<div class="panel"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><h2>${esc(o.ind||c&&c.n||'Indicador sem nome')}</h2>${f?`<span class="pill ${FAROL[f][0]}">${FAROL[f][1]}</span>`:'<span class="pill mute">sem medição automática</span>'}</div>
    <div class="fields"><label>Nome do indicador${inp(`plano.bsc.${i}.ind`,{ph:c?c.n:''})}</label><label class="wide">Objetivo (do BSC)<input type="text" value="${esc(o.obj)}" disabled></label><label class="wide">Fórmula de cálculo${inp(`plano.bsc.${i}.formula`,{ph:c?c.f:'Ex.: litros perdidos ÷ litros processados × 100'})}</label>
    <label>Unidade de medida${inp(`plano.bsc.${i}.unid`,{ph:c?c.u:''})}</label><label>Fonte dos dados${inp(`plano.bsc.${i}.fonte`,{ph:'Ex.: ERP, laboratório, DRE'})}</label><label>Periodicidade${inp(`plano.bsc.${i}.period`,{type:'sel',opts:['Diária','Semanal','Mensal','Trimestral','Semestral','Anual'].map(x=>[x,x])})}</label><label>Responsável${inp(`plano.bsc.${i}.resp`,{ph:'Cargo'})}</label>
@@ -872,7 +871,7 @@ function vKpis(){
 }
 function vSmart(){
   const B=S.plano.bsc,crit=[['s','Específica'],['m','Mensurável'],['a','Alcançável'],['r','Relevante'],['t','Temporal']];
-  return head('Unidade III · Implementação','Metas SMART','Verifique se as principais metas são Específicas, Mensuráveis, Alcançáveis, Relevantes e Temporais, e explique como atendem a cada critério.')+
+  return head('Parte II · Implementação','Metas SMART','Verifique se as principais metas são Específicas, Mensuráveis, Alcançáveis, Relevantes e Temporais, e explique como atendem a cada critério.')+
   `<div class="panel"><div class="tbl"><table><thead><tr><th style="min-width:200px">Meta</th>${crit.map(c=>`<th>${c[1]}</th>`).join('')}<th style="min-width:260px">Como a meta atende aos critérios</th></tr></thead><tbody>
   ${B.length?B.map((o,i)=>{o.smart=o.smart||{};const ok=crit.every(([k])=>o.smart[k]);return `<tr><td><b>${esc(o.meta||'(sem meta)')}</b><br><span class="small muted">${esc(o.ind||'')}</span>${ok?'<br><span class="pill good">SMART</span>':''}</td>${crit.map(([k])=>`<td style="text-align:center">${inp(`plano.bsc.${i}.smart.${k}`,{type:'chk',r:1})}</td>`).join('')}<td>${inp(`plano.bsc.${i}.smartTxt`,{type:'area',rows:2})}</td></tr>`}).join(''):'<tr><td colspan="7" class="empty">Cadastre metas no Balanced Scorecard.</td></tr>'}</tbody></table></div>
   <div class="guia"><div><b>S · Específica</b>Diz exatamente o que melhorar e onde.</div><div><b>M · Mensurável</b>Tem indicador e valor numérico.</div><div><b>A · Alcançável</b>É desafiadora, mas viável com os recursos.</div><div><b>R · Relevante</b>Liga-se a um objetivo estratégico.</div><div><b>T · Temporal</b>Tem prazo definido.</div></div></div>
@@ -880,7 +879,7 @@ function vSmart(){
 }
 function vW2h(){
   const L=S.plano.w2h,tot=L.reduce((a,x)=>a+(+x.much||0),0);
-  return head('Unidade III · Implementação','Plano de ação 5W2H','Para cada estratégia prioritária: o que, por que, onde, quando, quem, como e quanto custa. As ações devem ser realistas para a agroindústria.')+
+  return head('Parte II · Implementação','Plano de ação 5W2H','Para cada estratégia prioritária: o que, por que, onde, quando, quem, como e quanto custa. As ações devem ser realistas para a agroindústria.')+
   `<div class="panel">${tabela('plano.w2h',[{k:'obj',l:'Objetivo do BSC',t:'sel',opts:objOpts(),w:160},{k:'what',l:'What · O quê',t:'area',w:180},{k:'why',l:'Why · Por quê',t:'area',w:150},{k:'where',l:'Where · Onde',t:'area',w:110},{k:'when',l:'When · Quando',w:110},{k:'who',l:'Who · Quem',w:110},{k:'how',l:'How · Como',t:'area',w:180},{k:'much',l:'How much (R$ mil)',n:1,step:10,r:1},{k:'status',l:'Situação',t:'sel',opts:['Não iniciada','Em andamento','Concluída','Atrasada'].map(x=>[x,x]),r:1,w:120}],'w2h',{num:1,add:'Adicionar ação'})}
   <div class="kpis">${kpi('Ações',num(L.length))}${kpi('Custo total',mil(tot))}${kpi('Concluídas',num(L.filter(x=>x.status==='Concluída').length))}${kpi('Atrasadas',num(L.filter(x=>x.status==='Atrasada').length),'',L.some(x=>x.status==='Atrasada')?'bad':'')}</div></div>
   ${fund('w2h','Plano de ação 5W2H',['Ferramenta de planejamento de ações com sete perguntas.','Transformar estratégias em ações concretas e atribuíveis.','Para cada ação definem-se o quê, por quê, onde, quando, quem, como e quanto.','Torna claras as responsabilidades e o orçamento.','Os planos são acompanhados nas reuniões de controle.'])}`;
@@ -888,14 +887,14 @@ function vW2h(){
 function vControle(){
   const C=S.plano.controle,B=S.plano.bsc.filter(o=>o.kpi),H=S.hist;
   const heat=()=>{let t='<div class="tbl"><table class="heat"><thead><tr><th>Probab. \\ Impacto</th>'+[1,2,3,4,5].map(i=>`<th>${i}</th>`).join('')+'</tr></thead><tbody>';for(let p=5;p>=1;p--){t+=`<tr><th>${p}</th>`;for(let i=1;i<=5;i++){const v=p*i,n=S.plano.riscos.filter(r=>+r.p===p&&+r.i===i).length;t+=`<td style="background:${v>=15?'var(--bad-bg)':v>=8?'var(--warn-bg)':'var(--good-bg)'}">${n?n:''}</td>`}t+='</tr>'}return t+'</tbody></table></div>'};
-  return head('Unidade III · Implementação','Controle, acompanhamento e riscos','Como a organização vai acompanhar a execução: periodicidade, responsáveis, reuniões, tratamento de desvios, atualização de metas e revisão das estratégias (ciclo PDCA).')+
+  return head('Parte II · Implementação','Controle, acompanhamento e riscos','Como a organização vai acompanhar a execução: periodicidade, responsáveis, reuniões, tratamento de desvios, atualização de metas e revisão das estratégias (ciclo PDCA).')+
   `<div class="panel"><div class="fields"><label>Periodicidade das avaliações${inp('plano.controle.periodicidade',{ph:'Ex.: mensal (operacional), trimestral (estratégica), anual (revisão do plano)'})}</label><label>Responsáveis${inp('plano.controle.responsaveis',{ph:'Ex.: diretoria, escritório de estratégia, gerentes de área'})}</label>
   <label class="wide">Reuniões de acompanhamento${inp('plano.controle.reunioes',{type:'area',ph:'Ex.: Reunião de Análise Estratégica (RAE) trimestral com o painel do BSC'})}</label><label class="wide">Tratamento dos desvios${inp('plano.controle.desvios',{type:'area',ph:'Ex.: indicador vermelho por 2 períodos → análise de causa (Ishikawa, 5 porquês) e plano de ação corretiva'})}</label>
   <label class="wide">Atualização das metas e revisão das estratégias${inp('plano.controle.revisao',{type:'area'})}</label></div></div>
   <div class="panel"><h2>Painel de acompanhamento (KPIs ligados à simulação)</h2>${B.length&&H.length?`<div class="tbl"><table><thead><tr><th>Indicador</th><th>Meta</th>${H.map(h=>`<th class="n">${h.anoCal}</th>`).join('')}<th>Situação</th></tr></thead><tbody>${B.map(o=>{const c=KPICAT[o.kpi],f=farol(o);return `<tr><td>${esc(o.ind||c.n)}</td><td>${esc(o.meta||'—')}</td>${H.map(h=>`<td class="n">${kfmtT(h.kpi[o.kpi],c.t)}</td>`).join('')}<td>${f?`<span class="pill ${FAROL[f][0]}">${FAROL[f][1]}</span>`:'—'}</td></tr>`}).join('')}</tbody></table></div>`:'<p class="empty">Ligue indicadores do BSC a KPIs da simulação e encerre ao menos um ano para ver a evolução.</p>'}</div>
   <div class="panel"><h2>Registro de desvios e ações corretivas</h2>${tabela('plano.desvios',[{k:'data',l:'Período',w:90},{k:'ind',l:'Indicador',w:140},{k:'desvio',l:'Desvio observado',t:'area',w:160},{k:'causa',l:'Causa provável',t:'area',w:160},{k:'acao',l:'Ação corretiva',t:'area',w:160},{k:'resp',l:'Responsável',w:110}],'desvio',{add:'Registrar desvio'})}</div>
   <div class="grid2"><div class="panel"><h2>Matriz de riscos estratégicos</h2>${tabela('plano.riscos',[{k:'risco',l:'Risco',t:'area',w:180},{k:'cat',l:'Categoria',t:'sel',opts:['Mercado','Suprimento','Operacional','Financeiro','Ambiental','Regulatório','Pessoas','Tecnológico'].map(x=>[x,x]),w:120},{k:'p',l:'Prob.',t:'sel',opts:NOTA,r:1},{k:'i',l:'Impacto',t:'sel',opts:NOTA,r:1},{k:'resp',l:'Resposta (evitar, mitigar, transferir, aceitar)',t:'area',w:180}],'risco',{add:'Adicionar risco'})}</div><div class="panel"><h2>Mapa de calor</h2>${heat()}<p class="small muted">Número de riscos em cada célula. Vermelho: probabilidade × impacto ≥ 15.</p></div></div>
-  <div class="panel soft"><h2>Fundamentação teórica da Unidade III</h2><p class="sub">Implementação estratégica, objetivos e metas, indicadores de desempenho, Balanced Scorecard, planos de ação, controle estratégico, avaliação do planejamento e melhoria contínua.</p>${inp('plano.fundTeoria.u3',{type:'area',rows:8})}</div>
+  <div class="panel soft"><h2>Fundamentação teórica da Parte II</h2><p class="sub">Implementação estratégica, objetivos e metas, indicadores de desempenho, Balanced Scorecard, planos de ação, controle estratégico, avaliação do planejamento e melhoria contínua.</p>${inp('plano.fundTeoria.u3',{type:'area',rows:8})}</div>
   ${fund('controle','Controle e avaliação estratégica',['Processo de acompanhar a execução e corrigir o rumo (PDCA).','Garantir que os resultados estratégicos sejam alcançados.','Compara-se o realizado com as metas; desvios geram ações corretivas.','Sem controle, o plano vira documento de gaveta.','Define a rotina de gestão da estratégia na agroindústria.'])}`;
 }
 /* ---------- Planos funcionais (nível tático) ---------- */
@@ -926,7 +925,7 @@ function vPlanoProd(){
   return head('Planos funcionais · nível tático','Plano de produção e operações','Capacidade versus demanda por linha no horizonte do plano (projeção com as decisões atuais, sem novos investimentos após este ano), eficiência, qualidade, manutenção e suprimento de leite.')+
   `<div class="panel"><h2>Demanda e capacidade projetadas</h2><div class="tbl"><table><thead><tr><th>Linha</th>${pr.map(r=>`<th class="n">${r.anoCal}</th>`).join('')}</tr></thead><tbody>${ks.map(k=>`<tr><td><b>${esc(pr[pr.length-1].P[k].nome)}</b><br><span class="small muted">demanda / capacidade efetiva (${pr[pr.length-1].P[k].un})</span></td>${pr.map(r=>{const x=r.P[k];return x?`<td class="n">${num(x.D)}<br>${x.D>x.capEff*1.02?`<span class="pill warn">${num(x.capEff)}</span>`:`<span class="small muted">${num(x.capEff)}</span>`}</td>`:'<td class="n">—</td>'}).join('')}</tr>`).join('')}
   <tr class="tot"><td>Leite necessário / captação (mil L)</td>${pr.map(r=>`<td class="n">${num(r.leite.need)}<br><span class="small">${num(r.leite.capt)}</span></td>`).join('')}</tr></tbody></table></div><p class="small muted">Células destacadas: a demanda passa da capacidade. Use as ampliações em Decisões do ano e avalie o VPL em Investimentos.</p></div>
-  <div class="grid2"><div class="panel"><div class="fields" style="grid-template-columns:1fr"><label>Estratégia de produção e prioridades${inp('plano.prod.estrategia',{type:'area',ph:'Retome a matriz importância × desempenho da Unidade II.'})}</label><label>Plano de capacidade e investimentos${inp('plano.prod.capacidade',{type:'area'})}</label><label>Planejamento e controle da produção (PCP)${inp('plano.prod.pcp',{type:'area',ph:'Planejamento agregado, sazonalidade do leite (safra e entressafra), estoques de queijo e UHT.'})}</label></div></div>
+  <div class="grid2"><div class="panel"><div class="fields" style="grid-template-columns:1fr"><label>Estratégia de produção e prioridades${inp('plano.prod.estrategia',{type:'area',ph:'Retome a matriz importância × desempenho da Parte I.'})}</label><label>Plano de capacidade e investimentos${inp('plano.prod.capacidade',{type:'area'})}</label><label>Planejamento e controle da produção (PCP)${inp('plano.prod.pcp',{type:'area',ph:'Planejamento agregado, sazonalidade do leite (safra e entressafra), estoques de queijo e UHT.'})}</label></div></div>
   <div class="panel"><div class="fields" style="grid-template-columns:1fr"><label>Qualidade e segurança dos alimentos${inp('plano.prod.qualidade',{type:'area',ph:'BPF, APPCC, SIF, FSSC 22000, controle do leite na origem.'})}</label><label>Manutenção e eficiência (OEE, TPM)${inp('plano.prod.manutencao',{type:'area'})}</label><label>Suprimento de leite e relação com produtores${inp('plano.prod.suprimento',{type:'area'})}</label><label>Metas de operações${inp('plano.prod.metas',{type:'area',ph:'OEE, perdas, rendimento, soro valorizado, custo por litro.'})}</label></div></div></div>`;
 }
 function vPlanoFin(){
@@ -1066,7 +1065,7 @@ async function gerarDocx(){
   [['Nome','nome'],['Localização','localizacao'],['Histórico','historico'],['Porte','porte'],['Produtos','produtos'],['Capacidade produtiva','capacidade'],['Colaboradores','colaboradores'],['Mercados atendidos','mercados'],['Clientes','clientes'],['Fornecedores','fornecedores'],['Matérias-primas','materias'],['Processo produtivo','processo'],['Concorrentes','concorrentes'],['Cadeia produtiva','cadeia']].forEach(([l,k])=>d.lab(l,E[k]));
   if(P.fluxo.length)d.img(await svgPng(fluxoSVG(P.fluxo)),'Fluxograma simplificado do processo produtivo',12);
   // 3
-  d.h1('3 Fundamentação teórica');d.h2('3.1 Planejamento estratégico e organizações agroindustriais');d.p(P.fundTeoria.u1||'[Fundamentação da Unidade I]');d.h2('3.2 Formulação estratégica');d.p(P.fundTeoria.u2||'[Fundamentação da Unidade II]');d.h2('3.3 Implementação e controle estratégico');d.p(P.fundTeoria.u3||'[Fundamentação da Unidade III]');
+  d.h1('3 Fundamentação teórica');d.h2('3.1 Planejamento estratégico e organizações agroindustriais');d.p(P.fundTeoria.u1||'[Fundamentação da Parte I: planejamento e diagnóstico]');d.h2('3.2 Formulação estratégica');d.p(P.fundTeoria.u2||'[Fundamentação da Parte I: formulação]');d.h2('3.3 Implementação e controle estratégico');d.p(P.fundTeoria.u3||'[Fundamentação da Parte II]');
   // 4
   d.h1('4 Diagnóstico estratégico');
   d.h2('4.1 Identidade organizacional');ferr('identidade',()=>{d.quadro('Identidade organizacional',['Elemento','Descrição'],[['Missão',I.missao],['Visão',I.visao],['Valores',I.valores]],{w:[2200,6870]});if(I.analise)d.p(I.analise)});
@@ -1138,9 +1137,9 @@ function vGlossario(){
 const NAV=[
   ['Visão geral','',[['painel','Painel executivo'],['projeto','Projeto e roteiro'],['integrado','Plano integrado']]],
   ['Simulação','',[['decisoes','Decisões do ano'],['mercados','Mercados e portfólio'],['suprimento','Leite e operações'],['investimentos','Investimentos (VPL/TIR)'],['financas','Finanças'],['cenario','Cenário PESTEL']]],
-  ['Unidade I · Diagnóstico','11/09',[['caracterizacao','Caracterização e processo'],['identidade','Identidade organizacional'],['pestel','Análise PESTEL'],['porter','Cinco Forças de Porter'],['interno','Diagnóstico interno e VRIO'],['swot','Matriz SWOT']]],
-  ['Unidade II · Formulação','23/10',[['tows','SWOT cruzada'],['portfolio','BCG e Ansoff'],['competitiva','Estratégia competitiva'],['producao','Estratégia de produção'],['objetivos','Objetivos estratégicos'],['gut','Matriz GUT']]],
-  ['Unidade III · Implementação','27/11',[['bsc','Balanced Scorecard'],['mapa','Mapa estratégico'],['kpis','Indicadores (KPIs)'],['smart','Metas SMART'],['w2h','Plano de ação 5W2H'],['controle','Controle e riscos']]],
+  ['Parte I · Diagnóstico','23/10',[['caracterizacao','Caracterização e processo'],['identidade','Identidade organizacional'],['pestel','Análise PESTEL'],['porter','Cinco Forças de Porter'],['interno','Diagnóstico interno e VRIO'],['swot','Matriz SWOT']]],
+  ['Parte I · Formulação','23/10',[['tows','SWOT cruzada'],['portfolio','BCG e Ansoff'],['competitiva','Estratégia competitiva'],['producao','Estratégia de produção'],['objetivos','Objetivos estratégicos'],['gut','Matriz GUT']]],
+  ['Parte II · Implementação','27/11',[['bsc','Balanced Scorecard'],['mapa','Mapa estratégico'],['kpis','Indicadores (KPIs)'],['smart','Metas SMART'],['w2h','Plano de ação 5W2H'],['controle','Controle e riscos']]],
   ['Planos funcionais','tático',[['planoMkt','Plano de marketing'],['planoRh','Plano de pessoas (RH)'],['planoProd','Plano de produção'],['planoFin','Plano financeiro']]],
   ['Entrega','',[['relatorio','Relatório em Word'],['glossario','Referências e glossário']]]
 ];
