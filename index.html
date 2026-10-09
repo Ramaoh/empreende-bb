@@ -899,6 +899,8 @@ const A={
     try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:'application/json'}));a.download=nome;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);toast(`Arquivo ${nome} baixado. Guarde no pendrive ou no Drive.`)}
     catch(e){toast('Não foi possível baixar o arquivo neste navegador.',true)}
   },
+  relatorioPdf(){relatorioPdf()},
+  relatorioCsv(){relatorioCsv()},
   abrirArquivo(){const i=$('#arq');if(i)i.click()},
   turma(){carregarTurma()},
   reset(b){if(!resetArmado){resetArmado=true;b.textContent='Confirmar: apagar tudo';b.classList.add('danger');setTimeout(()=>{resetArmado=false;render()},5000);return}
@@ -1137,7 +1139,93 @@ function vPlano(){
    <div class="panel"><h2>Arquivo da empresa</h2><p>Cópia de segurança para guardar no pendrive ou no Drive. Também serve para continuar a empresa em outro computador.</p>
     <div class="form"><button class="btn pri" data-act="baixar" type="button">Baixar arquivo da empresa</button><button class="btn" data-act="abrirArquivo" type="button">Abrir arquivo da empresa</button><input type="file" id="arq" accept=".json,application/json" hidden></div>
     <div class="form"><button class="btn ghost" data-act="reset" type="button">Começar nova empresa</button></div></div>
-  </div>`;
+  </div>
+  <div class="panel"><h2>Relatório para o professor</h2><p>Arquivo para ler, imprimir ou entregar: identidade, Canvas, marca, produtos, resultados mês a mês, marketing e missões. Na janela de impressão, escolha “Salvar como PDF”.</p>
+   <div class="form"><button class="btn pri" data-act="relatorioPdf" type="button">Baixar relatório em PDF</button><button class="btn" data-act="relatorioCsv" type="button">Baixar planilha (.csv)</button></div></div>`;
+}
+
+
+/* ====================== relatório para o professor ====================== */
+function _slug(){return (S.empresa.nome||'empresa').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Za-z0-9]+/g,'-').replace(/^-|-$/g,'').toLowerCase()||'empresa'}
+async function baixarTexto(nome,data,mime){
+  if(temClaude()){
+    let d=null;try{d=await claude.use('downloads')}catch(e){}
+    if(!d)return toast('Este navegador não permite baixar arquivos aqui.',true);
+    try{await d.save({filename:nome,data});toast(`${nome} salvo.`)}catch(e){if(e&&e.code!=='declined')toast('Não foi possível salvar o arquivo agora.',true)}
+    return;
+  }
+  try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:mime}));a.download=nome;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);toast(`Arquivo ${nome} baixado.`)}
+  catch(e){toast('Não foi possível baixar o arquivo neste navegador.',true)}
+}
+const CANVAS_ROT=[['segmentos','Segmentos de clientes'],['proposta','Proposta de valor'],['canais','Canais'],['relacionamento','Relacionamento'],['receitas','Fontes de receita'],['recursos','Recursos principais'],['atividades','Atividades-chave'],['parcerias','Parcerias principais'],['custos','Estrutura de custos']];
+function relatorioHTML(){
+  const E=S.empresa,M=S.marca||{},H=S.hist||[],last=H[H.length-1];
+  const done=MISSOES.filter(m=>{try{return m.ok()}catch(e){return false}});
+  const nivel=done.length>=13?'Empresa consolidada':done.length>=9?'Pequena empresa':done.length>=5?'Startup':'Ideia no papel';
+  const pat=patrimonio(),hoje=new Date().toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});
+  const t=(v)=>esc(String(v||'').trim())||'<span class="vazio">não preenchido</span>';
+  const kp=(l,v)=>`<div class="k"><span>${l}</span><b>${v}</b></div>`;
+  const tot=H.reduce((a,x)=>({rec:a.rec+x.receita,luc:a.luc+x.lucro}),{rec:0,luc:0});
+  const arq=(typeof ARQUITETURAS!=='undefined'&&ARQUITETURAS[M.arquitetura])?ARQUITETURAS[M.arquitetura].nome:(M.arquitetura||'');
+  const dre=H.length?`<table><thead><tr><th>Mês</th><th>Receita</th><th>CPV</th><th>Perdas</th><th>Salários</th><th>Fixos</th><th>Marketing</th><th>Juros</th><th>Lucro líquido</th><th>Caixa</th><th>Reput.</th><th>% AF</th></tr></thead><tbody>
+    ${H.map(x=>`<tr><td>M${x.r} · ${esc(x.mes.slice(0,3))}</td><td>${num(x.receita,2)}</td><td>${num(x.cpv,2)}</td><td>${num(x.perdas,2)}</td><td>${num(x.salarios,2)}</td><td>${num(x.fixos,2)}</td><td>${num(x.mkt,2)}</td><td>${num(x.juros,2)}</td><td class="${x.lucro>=0?'pos':'neg'}">${num(x.lucro,2)}</td><td>${num(x.caixa,2)}</td><td>${num(x.rep)}</td><td>${x.afPct!=null?pct(x.afPct):'—'}</td></tr>`).join('')}
+    <tr class="tot"><td>Total</td><td>${num(tot.rec,2)}</td><td colspan="6"></td><td class="${tot.luc>=0?'pos':'neg'}">${num(tot.luc,2)}</td><td colspan="3"></td></tr></tbody></table>`:'<p class="vazio">Nenhum mês fechado ainda.</p>';
+  const MK=S.mktHist||[];
+  const mk=MK.length?`<table><thead><tr><th>Mês</th><th>% da receita</th><th>Investido</th><th>Vendas extras</th><th>Margem extra</th><th>ROI</th></tr></thead><tbody>
+    ${MK.map(m=>`<tr><td>M${m.r} · ${esc(m.mes)}</td><td>${num(m.pct,1)}%</td><td>${brl(m.gasto)}</td><td>${num(m.incUn)}</td><td>${brl(m.incMarg)}</td><td>${m.roi==null?'—':pct(m.roi)}</td></tr>`).join('')}</tbody></table>`:'<p class="vazio">Sem investimentos em marketing registrados.</p>';
+  const prods=`<table><thead><tr><th>Produto</th><th>Preço</th><th>Concorrente</th><th>Custo unitário</th><th>Estoque</th></tr></thead><tbody>
+    ${S.produtos.map(p=>`<tr><td>${esc(p.nome)}</td><td>${brl(p.preco)}</td><td>${brl(p.conc)}</td><td>${p.cm?brl(p.cm):'—'}</td><td>${num(p.estoque)} ${esc(p.un)}</td></tr>`).join('')}</tbody></table>`;
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Relatório – ${esc(E.nome||'Empresa')} – mês ${S.rodada}</title><style>
+  @page{size:A4;margin:14mm}
+  *{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#1f1a14;font-size:11pt;line-height:1.4;margin:0}
+  header{border-bottom:3px solid #5A3A22;padding-bottom:8px;margin-bottom:14px}
+  .inst{font-size:9pt;color:#6b6157}h1{font-size:20pt;margin:6px 0 2px;color:#5A3A22}.sub{color:#6b6157;font-size:10pt}
+  h2{font-size:13pt;color:#5A3A22;border-bottom:1px solid #d9cdbb;padding-bottom:3px;margin:18px 0 8px;break-after:avoid}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.k{border:1px solid #d9cdbb;border-radius:6px;padding:6px 8px}.k span{display:block;font-size:8.5pt;color:#6b6157}.k b{font-size:12pt}
+  table{width:100%;border-collapse:collapse;font-size:8.5pt;break-inside:auto}th,td{border:1px solid #d9cdbb;padding:4px 4px;text-align:right;white-space:nowrap}th{white-space:normal}th:first-child,td:first-child{text-align:left}th{background:#f3ebdf}
+  tr{break-inside:avoid}.tot td{font-weight:700;background:#faf6ef}.pos{color:#2f6b3b;font-weight:700}.neg{color:#b23a2a;font-weight:700}
+  dl{display:grid;grid-template-columns:34% 66%;gap:4px 10px;margin:0}dt{font-weight:700}dd{margin:0;white-space:pre-wrap}
+  .vazio{color:#9a8f84;font-style:italic}ul.m{columns:2;margin:0;padding-left:0;list-style:none}ul.m li{margin:2px 0}
+  .obs{border:1px solid #d9cdbb;border-radius:6px;height:120px;margin-top:6px}
+  footer{margin-top:18px;font-size:8.5pt;color:#6b6157;border-top:1px solid #d9cdbb;padding-top:6px}
+  </style></head><body>
+  <header><div class="inst">Projeto Empreende BB · Escola Deputado Renê Barbour · Barra do Bugres – MT · Coordenação: Prof. Dr. Ramão Humberto Martins Manvailer · UNEMAT</div>
+  <h1>${esc(E.nome||'Empresa')}</h1><div class="sub">${esc(E.slogan||'')}</div>
+  <div class="sub">Sócios: ${t(E.socios)} · Turma: ${t(E.turma)} · Situação no mês ${S.rodada} (${esc(mesNome(S.rodada))}) · Gerado em ${hoje}</div></header>
+  <h2>1. Resumo</h2><div class="grid">${kp('Caixa',brl(S.caixa))}${kp('Patrimônio líquido',brl(pat))}${kp('Retorno sobre o capital',pct((pat-S.capital)/S.capital))}${kp('Reputação',num(S.reputacao)+'/100')}
+   ${kp('Meses fechados',H.length)}${kp('Receita acumulada',brl(tot.rec))}${kp('Lucro acumulado',brl(tot.luc))}${kp('Missões',`${done.length} de ${MISSOES.length} · ${nivel}`)}</div>
+  <h2>2. Identidade e modelo de negócio</h2><dl><dt>Missão</dt><dd>${t(E.missao)}</dd>${CANVAS_ROT.map(([k,l])=>`<dt>${l}</dt><dd>${t((S.canvas||{})[k])}</dd>`).join('')}</dl>
+  <h2>3. Marca</h2><dl><dt>Arquitetura</dt><dd>${t(arq)}</dd><dt>Nome da marca</dt><dd>${t(M.nome)}</dd><dt>Slogan</dt><dd>${t(M.slogan)}</dd><dt>Personalidade</dt><dd>${t((M.personalidade||[]).join(', '))}</dd><dt>Público-alvo</dt><dd>${t(M.publico)}</dd><dt>Benefício principal</dt><dd>${t(M.beneficio)}</dd><dt>Diferencial</dt><dd>${t(M.diferencial)}</dd><dt>Força da marca</dt><dd>${pct(forcaMarca())}</dd></dl>
+  <h2>4. Produtos e preços</h2>${prods}
+  <h2>5. Resultados mês a mês (DRE resumida, em R$)</h2>${dre}
+  <h2>6. Marketing</h2>${mk}
+  <h2>7. Missões</h2><ul class="m">${MISSOES.map(m=>{let ok=false;try{ok=m.ok()}catch(e){}return `<li>${ok?'✔':'○'} ${esc(m.t)}</li>`}).join('')}</ul>
+  <h2>8. Comentários do professor</h2><div class="obs"></div>
+  <footer>Relatório gerado pelo ERP Empreende BB (Doce Cerrado). Valores em reais; % AF = parte das compras de insumos feita da agricultura familiar.</footer>
+  </body></html>`;
+}
+function relatorioPdf(){
+  const html=relatorioHTML();
+  const f=document.createElement('iframe');f.setAttribute('aria-hidden','true');f.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0';document.body.appendChild(f);
+  const d=f.contentWindow.document;d.open();d.write(html);d.close();
+  setTimeout(()=>{try{f.contentWindow.focus();f.contentWindow.print()}catch(e){toast('A impressão não está disponível aqui. Use a planilha (.csv).',true)}setTimeout(()=>f.remove(),60000)},400);
+  toast('Na janela de impressão, escolha “Salvar como PDF”.');
+}
+function relatorioCsv(){
+  const n=v=>(v==null||!isFinite(v))?'':String(Math.round(v*100)/100).replace('.',',');
+  const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+  const L=[];const E=S.empresa;
+  L.push([q('Empresa'),q(E.nome)].join(';'),[q('Sócios'),q(E.socios)].join(';'),[q('Turma'),q(E.turma)].join(';'),[q('Mês atual'),q(`${S.rodada} – ${mesNome(S.rodada)}`)].join(';'),[q('Caixa'),n(S.caixa)].join(';'),[q('Patrimônio líquido'),n(patrimonio())].join(';'),[q('Reputação'),n(S.reputacao)].join(';'),'');
+  L.push(q('RESULTADOS MÊS A MÊS'));
+  L.push(['Mês','Receita','Impostos','CPV','Perdas','Lucro bruto','Salários','Fixos','Marketing','Rescisões','Juros','Lucro líquido','Caixa','Reputação','% agricultura familiar'].map(q).join(';'));
+  (S.hist||[]).forEach(x=>L.push([q(`M${x.r} ${x.mes}`),n(x.receita),n(x.imposto),n(x.cpv),n(x.perdas),n(x.lbruto),n(x.salarios),n(x.fixos),n(x.mkt),n(x.resc),n(x.juros),n(x.lucro),n(x.caixa),n(x.rep),x.afPct!=null?n(x.afPct*100):''].join(';')));
+  L.push('',q('PRODUTOS'),['Produto','Preço','Concorrente','Custo unitário','Estoque'].map(q).join(';'));
+  S.produtos.forEach(p=>L.push([q(p.nome),n(p.preco),n(p.conc),n(p.cm),n(p.estoque)].join(';')));
+  L.push('',q('MARKETING'),['Mês','% da receita','Investido','Vendas extras','Margem extra','ROI %'].map(q).join(';'));
+  (S.mktHist||[]).forEach(m=>L.push([q(`M${m.r} ${m.mes}`),n(m.pct),n(m.gasto),n(m.incUn),n(m.incMarg),m.roi==null?'':n(m.roi*100)].join(';')));
+  L.push('',q('MISSÕES'));
+  MISSOES.forEach(m=>{let ok=false;try{ok=m.ok()}catch(e){}L.push([q(m.t),q(ok?'Concluída':'A fazer')].join(';'))});
+  baixarTexto(`relatorio-${_slug()}-mes-${S.rodada}.csv`,'﻿'+L.join('\r\n'),'text/csv;charset=utf-8');
 }
 
 function vMarca(){
@@ -1527,6 +1615,7 @@ function vRelatorios(){
   const fl={};S.lanc.forEach(l=>{fl[l.r]=fl[l.r]||{e:0,s:0};fl[l.r][l.tipo]+=l.valor});
   let saldo=0;const flRows=Object.keys(fl).map(Number).sort((a,b)=>a-b).map(r=>{saldo+=fl[r].e-fl[r].s;return `<tr><td>M${r} · ${mesNome(r)}</td><td class="n">${brl(fl[r].e)}</td><td class="n">${brl(fl[r].s)}</td><td class="n">${brl(fl[r].e-fl[r].s)}</td><td class="n">${brl(saldo)}</td></tr>`}).slice(-8).join('');
   return head('Controladoria','Relatórios','A DRE mostra se a empresa ganhou ou perdeu dinheiro. O balanço mostra o que ela tem e o que deve. O fluxo de caixa mostra por onde o dinheiro passou.')+
+  `<div class="form" style="margin-bottom:14px"><button class="btn pri" data-act="relatorioPdf" type="button">Baixar relatório em PDF</button><button class="btn" data-act="relatorioCsv" type="button">Baixar planilha (.csv)</button></div>`+
   (last?ind:'')+
   `<div class="panel"><h2>DRE: Demonstração do Resultado</h2>${h.length?`<div class="tbl"><table><thead><tr><th>Conta</th>${h.map(x=>`<th class="n">M${x.r} · ${x.mes.slice(0,3)}</th>`).join('')}</tr></thead><tbody>
    ${rows.map(([t,k,neg,cls])=>`<tr class="${cls||''}"><td>${t}</td>${h.map(x=>`<td class="n" ${k==='lucro'?`style="color:var(${x.lucro>=0?'--good':'--bad'})"`:''}>${neg&&x[k]?brl(-x[k]):brl(x[k])}</td>`).join('')}</tr>`).join('')}
