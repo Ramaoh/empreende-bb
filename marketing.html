@@ -1158,6 +1158,7 @@ async function baixarTexto(nome,data,mime){
   catch(e){toast('Não foi possível baixar o arquivo neste navegador.',true)}
 }
 const CANVAS_ROT=[['segmentos','Segmentos de clientes'],['proposta','Proposta de valor'],['canais','Canais'],['relacionamento','Relacionamento'],['receitas','Fontes de receita'],['recursos','Recursos principais'],['atividades','Atividades-chave'],['parcerias','Parcerias principais'],['custos','Estrutura de custos']];
+function _peMes(x){const cf=(x.salarios||0)+(x.fixos||0)+(x.mkt||0)+(x.juros||0)+(x.resc||0),mcp=x.receita?((x.rliq||0)-(x.cpv||0)-(x.perdas||0))/x.receita:0,pe=mcp>0?cf/mcp:Infinity;return {cf,mcp,pe,ms:isFinite(pe)&&x.receita?(x.receita-pe)/x.receita:null}}
 function relatorioHTML(){
   const E=S.empresa,M=S.marca||{},H=S.hist||[],last=H[H.length-1];
   const done=MISSOES.filter(m=>{try{return m.ok()}catch(e){return false}});
@@ -1170,6 +1171,9 @@ function relatorioHTML(){
   const dre=H.length?`<table><thead><tr><th>Mês</th><th>Receita</th><th>CPV</th><th>Perdas</th><th>Salários</th><th>Fixos</th><th>Marketing</th><th>Juros</th><th>Lucro líquido</th><th>Caixa</th><th>Reput.</th><th>% AF</th></tr></thead><tbody>
     ${H.map(x=>`<tr><td>M${x.r} · ${esc(x.mes.slice(0,3))}</td><td>${num(x.receita,2)}</td><td>${num(x.cpv,2)}</td><td>${num(x.perdas,2)}</td><td>${num(x.salarios,2)}</td><td>${num(x.fixos,2)}</td><td>${num(x.mkt,2)}</td><td>${num(x.juros,2)}</td><td class="${x.lucro>=0?'pos':'neg'}">${num(x.lucro,2)}</td><td>${num(x.caixa,2)}</td><td>${num(x.rep)}</td><td>${x.afPct!=null?pct(x.afPct):'—'}</td></tr>`).join('')}
     <tr class="tot"><td>Total</td><td>${num(tot.rec,2)}</td><td colspan="6"></td><td class="${tot.luc>=0?'pos':'neg'}">${num(tot.luc,2)}</td><td colspan="3"></td></tr></tbody></table>`:'<p class="vazio">Nenhum mês fechado ainda.</p>';
+  const peT=H.length?`<table><thead><tr><th>Mês</th><th>Receita</th><th>Custos fixos</th><th>Margem de contribuição</th><th>Ponto de equilíbrio</th><th>Margem de segurança</th><th>Situação</th></tr></thead><tbody>
+    ${H.map(x=>{const e=_peMes(x),ok=isFinite(e.pe)&&x.receita>=e.pe;return `<tr><td>M${x.r} · ${esc(x.mes.slice(0,3))}</td><td>${num(x.receita,2)}</td><td>${num(e.cf,2)}</td><td>${pct(e.mcp)}</td><td>${isFinite(e.pe)?num(e.pe,2):'—'}</td><td class="${ok?'pos':'neg'}">${e.ms!=null?pct(e.ms):'—'}</td><td class="${ok?'pos':'neg'}">${ok?'Acima':'Abaixo'}</td></tr>`}).join('')}</tbody></table><p class="nota">Ponto de equilíbrio = custos fixos ÷ margem de contribuição %. É o faturamento mínimo do mês para não ter prejuízo. Margem de segurança = quanto as vendas poderiam cair, em %, antes de dar prejuízo.</p>`:'<p class="vazio">Nenhum mês fechado ainda.</p>';
+  const peU=H.length?_peMes(H[H.length-1]):null;
   const MK=S.mktHist||[];
   const mk=MK.length?`<table><thead><tr><th>Mês</th><th>% da receita</th><th>Investido</th><th>Vendas extras</th><th>Margem extra</th><th>ROI</th></tr></thead><tbody>
     ${MK.map(m=>`<tr><td>M${m.r} · ${esc(m.mes)}</td><td>${num(m.pct,1)}%</td><td>${brl(m.gasto)}</td><td>${num(m.incUn)}</td><td>${brl(m.incMarg)}</td><td>${m.roi==null?'—':pct(m.roi)}</td></tr>`).join('')}</tbody></table>`:'<p class="vazio">Sem investimentos em marketing registrados.</p>';
@@ -1187,20 +1191,22 @@ function relatorioHTML(){
   dl{display:grid;grid-template-columns:32% minmax(0,1fr);gap:4px 10px;margin:0}dt{font-weight:700}dd{margin:0;white-space:pre-wrap}
   .vazio{color:#9a8f84;font-style:italic}ul.m{columns:2;margin:0;padding-left:0;list-style:none}ul.m li{margin:2px 0}
   .obs{border:1px solid #d9cdbb;border-radius:6px;height:120px;margin-top:6px}
+  .nota{font-size:8.5pt;color:#6b6157;margin:4px 0 0}
   footer{margin-top:18px;font-size:8.5pt;color:#6b6157;border-top:1px solid #d9cdbb;padding-top:6px}
   </style></head><body>
   <header><div class="inst">Universidade do Estado de Mato Grosso – UNEMAT · Curso de Engenharia de Produção Agroindustrial · Disciplina de Marketing · Prof. Dr. Ramão Humberto Martins Manvailer</div>
   <h1>${esc(E.nome||'Empresa')}</h1><div class="sub">${esc(E.slogan||'')}</div>
   <div class="sub">Sócios: ${t(E.socios)} · Turma: ${t(E.turma)} · ${H.length} ${H.length===1?'mês fechado':'meses fechados'} · próximo: mês ${S.rodada} (${esc(mesNome(S.rodada))}) · Gerado em ${hoje}</div></header>
   <h2>1. Resumo</h2><div class="grid">${kp('Caixa',brl(S.caixa))}${kp('Patrimônio líquido',brl(pat))}${kp('Retorno sobre o capital',pct((pat-S.capital)/S.capital))}${kp('Reputação',num(S.reputacao)+'/100')}
-   ${kp('Meses fechados',H.length)}${kp('Receita acumulada',brl(tot.rec))}${kp('Lucro acumulado',brl(tot.luc))}${kp('Missões',`${done.length} de ${MISSOES.length} · ${nivel}`)}</div>
+   ${kp('Meses fechados',H.length)}${kp('Receita acumulada',brl(tot.rec))}${kp('Lucro acumulado',brl(tot.luc))}${kp('Missões',`${done.length} de ${MISSOES.length} · ${nivel}`)}${peU?kp('Ponto de equilíbrio (último mês)',isFinite(peU.pe)?brl(peU.pe):'sem margem positiva'):''}${peU?kp('Margem de segurança (último mês)',peU.ms!=null?pct(peU.ms):'—'):''}</div>
   <h2>2. Identidade e modelo de negócio</h2><dl><dt>Missão</dt><dd>${t(E.missao)}</dd>${CANVAS_ROT.map(([k,l])=>`<dt>${l}</dt><dd>${t((S.canvas||{})[k])}</dd>`).join('')}</dl>
   <h2>3. Marca</h2><dl><dt>Arquitetura</dt><dd>${t(arq)}</dd><dt>Nome da marca</dt><dd>${t(M.nome)}</dd><dt>Slogan</dt><dd>${t(M.slogan)}</dd><dt>Personalidade</dt><dd>${t((M.personalidade||[]).join(', '))}</dd><dt>Público-alvo</dt><dd>${t(M.publico)}</dd><dt>Benefício principal</dt><dd>${t(M.beneficio)}</dd><dt>Diferencial</dt><dd>${t(M.diferencial)}</dd><dt>Força da marca</dt><dd>${pct(forcaMarca())}</dd><dt>Declaração de posicionamento</dt><dd>${fraseMarca()}</dd><dt>Segmentação</dt><dd>${t(S.mktPlano.segmentacao)}</dd></dl><h2>3b. Plano de marketing</h2><table><thead><tr><th>Produto</th><th>Fase do ciclo de vida</th><th style="text-align:left">Estratégia</th></tr></thead><tbody>${S.produtos.map(p=>{const f=FASES_CV.find(x=>x[0]===S.mktPlano.fases[p.id]);return `<tr><td>${esc(p.nome)}</td><td>${f?f[1]:'—'}</td><td style="text-align:left;white-space:normal">${t(S.mktPlano.estrat[p.id])}</td></tr>`}).join('')}</tbody></table><dl style="margin-top:8px"><dt>Ações de fidelização</dt><dd>${t(S.mktPlano.fidel)}</dd><dt>Indicador</dt><dd>${t(S.mktPlano.indicador)}</dd><dt>Meta e prazo</dt><dd>${t(S.mktPlano.meta)}</dd></dl>
   <h2>4. Produtos e preços</h2>${prods}
   <h2>5. Resultados mês a mês (DRE resumida, em R$)</h2>${dre}
-  <h2>6. Marketing</h2>${mk}
-  <h2>7. Missões</h2><ul class="m">${MISSOES.map(m=>{let ok=false;try{ok=m.ok()}catch(e){}return `<li>${ok?'✔':'○'} ${esc(m.t)}</li>`}).join('')}</ul>
-  <h2>8. Comentários do professor</h2><div class="obs"></div>
+  <h2>6. Ponto de equilíbrio mês a mês (em R$)</h2>${peT}
+  <h2>7. Marketing</h2>${mk}
+  <h2>8. Missões</h2><ul class="m">${MISSOES.map(m=>{let ok=false;try{ok=m.ok()}catch(e){}return `<li>${ok?'✔':'○'} ${esc(m.t)}</li>`}).join('')}</ul>
+  <h2>9. Comentários do professor</h2><div class="obs"></div>
   <footer>Relatório gerado pelo ERP Doce Cerrado, edição Marketing. Valores em reais; % AF = parte das compras de insumos feita da agricultura familiar.</footer>
   </body></html>`;
 }
@@ -1219,6 +1225,8 @@ function relatorioCsv(){
   L.push(q('RESULTADOS MÊS A MÊS'));
   L.push(['Mês','Receita','Impostos','CPV','Perdas','Lucro bruto','Salários','Fixos','Marketing','Rescisões','Juros','Lucro líquido','Caixa','Reputação','% agricultura familiar'].map(q).join(';'));
   (S.hist||[]).forEach(x=>L.push([q(`M${x.r} ${x.mes}`),n(x.receita),n(x.imposto),n(x.cpv),n(x.perdas),n(x.lbruto),n(x.salarios),n(x.fixos),n(x.mkt),n(x.resc),n(x.juros),n(x.lucro),n(x.caixa),n(x.rep),x.afPct!=null?n(x.afPct*100):''].join(';')));
+  L.push('',q('PONTO DE EQUILÍBRIO MÊS A MÊS'),['Mês','Receita','Custos fixos','Margem de contribuição %','Ponto de equilíbrio','Margem de segurança %','Situação'].map(q).join(';'));
+  (S.hist||[]).forEach(x=>{const e=_peMes(x),ok=isFinite(e.pe)&&x.receita>=e.pe;L.push([q(`M${x.r} ${x.mes}`),n(x.receita),n(e.cf),n(e.mcp*100),isFinite(e.pe)?n(e.pe):'',e.ms!=null?n(e.ms*100):'',q(ok?'Acima':'Abaixo')].join(';'))});
   L.push('',q('PRODUTOS'),['Produto','Preço','Concorrente','Custo unitário','Estoque'].map(q).join(';'));
   S.produtos.forEach(p=>L.push([q(p.nome),n(p.preco),n(p.conc),n(p.cm),n(p.estoque)].join(';')));
   L.push('',q('MARKETING'),['Mês','% da receita','Investido','Vendas extras','Margem extra','ROI %'].map(q).join(';'));

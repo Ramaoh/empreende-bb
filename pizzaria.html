@@ -1002,6 +1002,18 @@ const A={
   amortizar(){let v=nval('amo_v');if(!(v>0))return toast('Informe o valor.',true);v=Math.min(v,S.divida);if(v>S.caixa)return toast('Caixa insuficiente para amortizar esse valor.',true);
     S.divida=r2(S.divida-v);mov('s','Empréstimos','Amortização do empréstimo',v);save();render();toast(`Dívida reduzida em ${brl(v)}.`)},
   preFechar(){abrirPreFechar()},
+  preComprar(b){
+    const forma=b.dataset.v,fat=forma==='prazo'?1+PRAZO_ACRESC:1,sug=sugestoes(),L=compraveis().filter(i=>(sug[i.id]||0)>0);
+    if(!L.length)return toast('O estoque já cobre a previsão deste mês.');
+    const total=L.reduce((a,i)=>a+r2(sug[i.id]*r4(i.preco*fat)),0);
+    if(forma==='vista'&&total>S.caixa+0.001)return toast(`A compra à vista custa ${brl(total)} e há ${brl(S.caixa)} em caixa. Compre a prazo.`,true);
+    for(const i of L){const q=sug[i.id],unit=r4(i.preco*fat),t=r2(q*unit),forn=(S.fornecedores.find(f=>f.id===i.forn)||{}).nome||'Fornecedor';
+      i.cm=r4((i.estoque*(i.cm||unit)+q*unit)/(i.estoque+q));i.estoque=r4(i.estoque+q);registraCompra(i,t);
+      if(forma==='prazo')S.pagar.push({desc:`${forn}: ${num(q)} ${i.un} de ${i.nome}`,valor:t,vence:S.rodada+1});else mov('s','Compras',`Compra planejada: ${num(q)} ${i.un} de ${i.nome}`,t)}
+    S.stats.compras++;S.mes.comprou=true;save();render();abrirPreFechar();
+    toast(`Compra concluída: ${L.length} insumos por ${brl(total)}${forma==='prazo'?', a pagar no fim do próximo mês':''}.`);
+  },
+  preProduzir(){A.produzirPlano();abrirPreFechar()},
   fechar(){fecharMes()},
   fecharModal(){$('#modal').hidden=true;$('#modal').innerHTML='';render()},
   async baixar(){
@@ -1032,6 +1044,38 @@ function sugestoes(){
 }
 
 /* ====================== fechar o mês ====================== */
+function previsaoCaixa(){
+  const pz=pizzas(),c=S.canal,sh=canalInfo().sh;
+  const pzPrev=pz.reduce((a,p)=>a+plano(p).esperado,0);
+  const pm=pz.length?pz.reduce((a,p)=>a+p.preco,0)/pz.length:0,cm=pz.length?pz.reduce((a,p)=>a+custoPadrao(p),0)/pz.length:0;
+  const pa=pm*(1+(+c.markup||0)/100);
+  const e={salao:pm*(1-IMPOSTO),balcao:pm*(1-IMPOSTO),delivery:pm*(1-IMPOSTO)+((+c.taxa||0)*(1-IMPOSTO)-CUSTO_ENTREGA)/PIZZAS_POR_PEDIDO,app:pa*(1-IMPOSTO-COMISSAO_APP)};
+  let ent=0,tot=0;for(const k in e){ent+=(sh[k]||0)*e[k];tot+=sh[k]||0}ent=tot?ent/tot:pm*(1-IMPOSTO);
+  const mc=ent-cm;
+  const venc=S.pagar.filter(x=>x.vence<=S.rodada).reduce((a,x)=>a+x.valor,0);
+  const receber=S.receber.filter(x=>x.vence<=S.rodada).reduce((a,x)=>a+x.valor,0);
+  const saidas=folha()+fixosTot()+orcMkt()+S.divida*JUROS+venc;
+  const sug=sugestoes(),compra=compraveis().reduce((a,i)=>a+(sug[i.id]||0)*i.preco,0);
+  const entradas=pzPrev*ent+receber,fim=S.caixa+entradas-saidas-compra;
+  const deficit=fim<0?-fim:0,extra=deficit&&mc>0?Math.ceil(deficit/mc):0;
+  return {pzPrev,pm,ent,mc,saidas,venc,receber,compra,entradas,fim,deficit,extra,livre:Math.max(0,Math.floor(fornoLivre()-pzPrev))};
+}
+function blocoInsumos(){
+  const sug=sugestoes(),L=compraveis().filter(i=>(sug[i.id]||0)>0),{need}=mrp();
+  const tot=L.reduce((a,i)=>a+sug[i.id]*i.preco,0),totP=L.reduce((a,i)=>a+r2(sug[i.id]*r4(i.preco*(1+PRAZO_ACRESC))),0);
+  const pp=planoPrep().filter(x=>x.produzir>0),mts=S.produtos.filter(p=>{const pl=plano(p);return pl.pol==='MTS'&&pl.produzir>0});
+  if(!L.length&&!pp.length&&!mts.length)return `<div class="alert good"><b>Insumos</b><span>O estoque e o pré-preparo cobrem a previsão de vendas deste mês.</span></div>`;
+  const tab=L.length?`<div class="tbl"><table><thead><tr><th>Insumo</th><th class="n">Precisa</th><th class="n">Tem</th><th class="n">Comprar</th><th class="n">Custo</th></tr></thead><tbody>
+    ${L.map(i=>`<tr><td>${esc(i.nome)}${insAF(i)?' <span class="pill good">AF</span>':''}</td><td class="n">${num(r2(need[i.id]||0))} ${esc(i.un)}</td><td class="n">${num(r2(i.estoque))}</td><td class="n"><b>${num(sug[i.id])}</b></td><td class="n">${brl(sug[i.id]*i.preco)}</td></tr>`).join('')}
+    <tr><td colspan="4"><b>Total à vista</b></td><td class="n"><b>${brl(tot)}</b></td></tr></tbody></table></div>`:'';
+  const btC=L.length?`<button class="btn pri" data-act="preComprar" data-v="vista" type="button" ${tot>S.caixa+0.001?'disabled title="Caixa insuficiente"':''}>Comprar tudo à vista · ${brl(tot)}</button><button class="btn" data-act="preComprar" data-v="prazo" type="button">Comprar a prazo · ${brl(totP)} (paga no mês seguinte)</button>`:'';
+  const prepTxt=[...pp.map(x=>`${num(x.produzir)} ${x.i.un} de ${x.i.nome.toLowerCase()}`),...mts.map(p=>`${num(plano(p).produzir)} ${p.un} de ${p.nome}`)];
+  return `<div class="panel" style="margin:0;padding:14px">
+    <h3 style="margin:0 0 6px">Necessidade de insumos para o mês</h3>
+    ${L.length?`<p class="small muted" style="margin:0 0 8px">Passo 1 · Comprar. O ERP somou os ingredientes das pizzas previstas no PCP e do pré-preparo e descontou o que já está em estoque.</p>${tab}<div class="acts" style="justify-content:flex-start;flex-wrap:wrap">${btC}</div>${tot>S.caixa+0.001?`<p class="small" style="color:var(--bad)">O caixa (${brl(S.caixa)}) não cobre a compra à vista. Compre a prazo (+3%) ou veja o alerta de caixa abaixo.</p>`:''}`:''}
+    ${prepTxt.length?`<p class="small muted" style="margin:10px 0 6px">${L.length?'Passo 2 · ':''}Preparar: ${esc(prepTxt.join('; '))}.${L.length?' Compre antes, para ter os ingredientes.':''}</p><div class="acts" style="justify-content:flex-start"><button class="btn" data-act="preProduzir" type="button">Fazer o pré-preparo e a produção do plano</button></div>`:''}
+  </div>`;
+}
 function abrirPreFechar(){
   atualizaPrep();
   const avisos=[];
@@ -1041,19 +1085,28 @@ function abrirPreFechar(){
   // simula o consumo do pré-preparo e dos ingredientes pelas pizzas feitas na hora
   const need={};S.produtos.forEach(p=>{const pl=plano(p);if(pl.pol!=='MTO')return;for(const [k,q] of Object.entries(p.ficha))need[k]=(need[k]||0)+pl.unidades*q});
   const faltas=S.insumos.filter(i=>(need[i.id]||0)>i.estoque*1.02&&(need[i.id]||0)>0).map(i=>`${i.nome.toLowerCase()} (tem ${num(r2(i.estoque))}, a previsão pede ~${num(r2(need[i.id]))} ${i.un})`);
-  if(faltas.length)avisos.push(`<div class="alert warn"><b>Pizzas feitas na hora</b><span>Pode faltar: ${esc(faltas.join('; '))}. Sem isso, os pedidos não são atendidos. Faça o pré-preparo e compre ingredientes.</span></div>`);
+  const _sg=sugestoes(),_pend=compraveis().some(i=>(_sg[i.id]||0)>0)||planoPrep().some(x=>x.produzir>0);
+  if(faltas.length&&!_pend)avisos.push(`<div class="alert warn"><b>Pizzas feitas na hora</b><span>Pode faltar: ${esc(faltas.join('; '))}. Sem isso, os pedidos não são atendidos. Faça o pré-preparo e compre ingredientes.</span></div>`);
   const pzPrev=pizzas().reduce((a,p)=>a+plano(p).esperado,0);
   if(pzPrev>fornoLivre())avisos.push(`<div class="alert warn"><b>Forno</b><span>A previsão é de ~${num(pzPrev)} pizzas e o forno assa ${num(fornoLivre())} no mês. Compre outro forno em Pessoas e estrutura.</span></div>`);
   const ci=canalInfo(),sal=Math.round(pzPrev*ci.sh.salao);
   if(sal>capSalao())avisos.push(`<div class="alert warn"><b>Salão</b><span>~${num(sal)} pizzas previstas no salão para capacidade de ${num(capSalao())}. Contrate atendentes.</span></div>`);
   const venc=S.pagar.filter(x=>x.vence<=S.rodada).reduce((a,x)=>a+x.valor,0);
   const saidas=folha()+fixosTot()+orcMkt()+S.divida*JUROS+venc;
-  if(saidas>S.caixa)avisos.push(`<div class="alert bad"><b>Caixa</b><span>As saídas previstas (${brl(saidas)}) superam o caixa atual (${brl(S.caixa)}). Sem vendas suficientes, o banco cobrirá a diferença com cheque especial (tarifa de 8%).</span></div>`);
+  const pc=previsaoCaixa();
+  if(pc.deficit>0){
+    const cabe=pc.extra<=pc.livre;
+    avisos.push(`<div class="alert bad"><b>Caixa descoberto</b><span>Pela previsão, o caixa termina o mês em <b>${brl(pc.fim)}</b>. Para evitar o empréstimo e o cheque especial (tarifa de 8%), vendam cerca de <b>${num(pc.extra)} pizzas a mais</b> neste mês: cada pizza extra deixa ~${brl(pc.mc)} de margem (${brl(pc.deficit)} ÷ ${brl(pc.mc)}).
+      ${cabe?`O forno ainda tem espaço para ~${num(pc.livre)} pizzas além da previsão.`:`O forno só tem espaço para ~${num(pc.livre)} pizzas além da previsão: combinem as vendas extras com outra medida.`}
+      Como vender mais: aceitar as encomendas pendentes, fazer uma venda direta para um cliente em Vendas e encomendas ou reforçar a divulgação. Outras saídas: comprar insumos a prazo, reduzir o marketing ou adiar contratações.</span></div>`);
+  }else if(saidas>S.caixa)avisos.push(`<div class="alert warn"><b>Caixa</b><span>As saídas fixas (${brl(saidas)}) superam o caixa atual (${brl(S.caixa)}), mas as vendas previstas devem cobrir a diferença: o caixa deve terminar em ~${brl(pc.fim)}. Se vender menos que ~${num(Math.ceil((saidas+pc.compra-S.caixa-pc.receber)/Math.max(pc.ent,0.01)))} pizzas, falta dinheiro.</span></div>`);
   if(S.pedidos.length)avisos.push(`<div class="alert warn"><b>Encomendas</b><span>${S.pedidos.length} encomenda(s) ainda sem resposta vão expirar.</span></div>`);
   $('#modal').innerHTML=`<div class="box" role="dialog" aria-modal="true" aria-labelledby="mt">
     <p class="eyebrow">Mês ${S.rodada} · ${mesNome(S.rodada)}</p><h2 id="mt">Fechar o mês?</h2>
     <p class="muted">Os clientes vão fazer os pedidos pelos canais de venda. As pizzas feitas na hora serão montadas e assadas com os discos, o molho e os ingredientes em estoque. O marketing será aplicado, as contas serão pagas e a DRE será gerada. Depois disso não dá para voltar.</p>
+    ${blocoInsumos()}
     ${avisos.length?`<div class="list" style="display:flex;flex-direction:column;gap:8px">${avisos.join('')}</div>`:'<div class="alert good"><b>Tudo pronto</b><span>Pré-preparo, ingredientes e caixa cobrem a previsão.</span></div>'}
+    <div class="formula">Caixa previsto no fim do mês = caixa ${brl(S.caixa)} + vendas previstas ~${num(pc.pzPrev)} pizzas × ${brl(pc.ent)} líquidos${pc.receber?` + a receber ${brl(pc.receber)}`:''} − saídas ${brl(pc.saidas)}${pc.compra?` − compras pendentes ${brl(pc.compra)}`:''} = <b>${brl(pc.fim)}</b> (estimativa; bebidas não incluídas)</div>
     <div class="formula">Saídas previstas: salários ${brl(folha())} · fixos e pró-labore ${brl(fixosTot())} · marketing ${brl(orcMkt())} · juros ${brl(S.divida*JUROS)} · contas a pagar ${brl(venc)} · impostos 6% · comissão do app e entregadores conforme as vendas</div>
     <div class="acts"><button class="btn" data-act="fecharModal" type="button">Voltar e ajustar</button><button class="btn acc" data-act="fechar" type="button">Fechar o mês</button></div></div>`;
   $('#modal').hidden=false;
@@ -1326,6 +1379,7 @@ async function baixarTexto(nome,data,mime){
 }
 const CANVAS_ROT=[['segmentos','Segmentos de clientes'],['proposta','Proposta de valor'],['canais','Canais'],['relacionamento','Relacionamento'],['receitas','Fontes de receita'],['recursos','Recursos principais'],['atividades','Atividades-chave'],['parcerias','Parcerias principais'],['custos','Estrutura de custos']];
 function _missoesOk(){return MISSOES.map(m=>{let ok=false;try{ok=!!m.ok()}catch(e){}return [m,ok]})}
+function _peMes(x){const cf=(x.salarios||0)+(x.fixos||0)+(x.mkt||0)+(x.juros||0)+(x.resc||0)+(x.dep||0),mcp=x.receita?((x.rliq||0)-(x.cpv||0)-(x.perdas||0)-(x.comissao||0)-(x.entregas||0))/x.receita:0,pe=mcp>0?cf/mcp:Infinity,tk=x.pizzas?x.receita/x.pizzas:0;return {cf,mcp,pe,pz:isFinite(pe)&&tk?Math.ceil(pe/tk):null,ms:isFinite(pe)&&x.receita?(x.receita-pe)/x.receita:null}}
 function relatorioHTML(){
   const E=S.empresa,M=S.marca||{},H=S.hist||[];
   const ms=_missoesOk(),done=ms.filter(x=>x[1]).length;
@@ -1339,6 +1393,9 @@ function relatorioHTML(){
   const dre=H.length?`<table><thead><tr><th>Mês</th><th>Receita</th><th>CMV</th><th>Perdas</th><th>Comissão app</th><th>Entregas</th><th>Salários</th><th>Fixos e depreciação</th><th>Marketing</th><th>Juros</th><th>Lucro líquido</th></tr></thead><tbody>
     ${H.map(x=>`<tr><td>M${x.r} · ${esc(x.mes.slice(0,3))}</td><td>${n2(x.receita)}</td><td>${n2(x.cpv)}</td><td>${n2(x.perdas)}</td><td>${n2(x.comissao)}</td><td>${n2(x.entregas)}</td><td>${n2(x.salarios)}</td><td>${n2((x.fixos||0)+(x.dep||0))}</td><td>${n2(x.mkt)}</td><td>${n2(x.juros)}</td><td class="${x.lucro>=0?'pos':'neg'}">${n2(x.lucro)}</td></tr>`).join('')}
     <tr class="tot"><td>Total</td><td>${n2(tot.rec)}</td><td colspan="8"></td><td class="${tot.luc>=0?'pos':'neg'}">${n2(tot.luc)}</td></tr></tbody></table>`:'<p class="vazio">Nenhum mês fechado ainda.</p>';
+  const peT=H.length?`<table><thead><tr><th>Mês</th><th>Receita</th><th>Custos fixos</th><th>Margem de contribuição</th><th>Ponto de equilíbrio</th><th>Pizzas para empatar</th><th>Pizzas vendidas</th><th>Margem de segurança</th><th>Situação</th></tr></thead><tbody>
+    ${H.map(x=>{const e=_peMes(x),ok=isFinite(e.pe)&&x.receita>=e.pe;return `<tr><td>M${x.r} · ${esc(x.mes.slice(0,3))}</td><td>${n2(x.receita)}</td><td>${n2(e.cf)}</td><td>${pct(e.mcp)}</td><td>${isFinite(e.pe)?n2(e.pe):'—'}</td><td>${e.pz!=null?num(e.pz):'—'}</td><td>${num(x.pizzas||0)}</td><td class="${ok?'pos':'neg'}">${e.ms!=null?pct(e.ms):'—'}</td><td class="${ok?'pos':'neg'}">${ok?'Acima':'Abaixo'}</td></tr>`}).join('')}</tbody></table><p class="nota">Ponto de equilíbrio = custos fixos ÷ margem de contribuição %. É o faturamento mínimo do mês para não ter prejuízo. Margem de segurança = quanto as vendas poderiam cair, em %, antes de dar prejuízo.</p>`:'<p class="vazio">Nenhum mês fechado ainda.</p>';
+  const peU=H.length?_peMes(H[H.length-1]):null;
   const ops=H.length?`<table><thead><tr><th>Mês</th><th>Notícia do mês</th><th>Pizzas</th><th>Pedidos</th><th>Entregas</th><th>Forno usado</th><th>Horas de cozinha</th><th>Caixa</th><th>Reput.</th><th>% AF</th></tr></thead><tbody>
     ${H.map(x=>`<tr><td>M${x.r} · ${esc(x.mes.slice(0,3))}</td><td style="text-align:left;white-space:normal">${esc(x.evento||'')}</td><td>${num(x.pizzas||0)}</td><td>${num(x.pedidos||0)}</td><td>${num(x.nEntregas||0)}</td><td>${num(x.forno||0)}/${num(x.capForno||0)}</td><td>${num(x.horas||0)}/${num(x.horasTot||0)}</td><td>${n2(x.caixa)}</td><td>${num(x.rep)}</td><td>${x.afPct!=null?pct(x.afPct):'—'}</td></tr>`).join('')}</tbody></table>`:'';
   const MK=S.mktHist||[];
@@ -1363,6 +1420,7 @@ function relatorioHTML(){
   dl{display:grid;grid-template-columns:30% minmax(0,1fr);gap:3px 10px;margin:0}dt{font-weight:700}dd{margin:0;white-space:pre-wrap}
   .vazio{color:#9a8f84;font-style:italic}ul.m{columns:2;margin:0;padding-left:0;list-style:none}ul.m li{margin:2px 0}
   .obs{border:1px solid #e2d8c8;border-radius:6px;height:110px;margin-top:6px}
+  .nota{font-size:8pt;color:#6b6157;margin:4px 0 0}
   footer{margin-top:16px;font-size:8pt;color:#6b6157;border-top:1px solid #e2d8c8;padding-top:6px}
   </style></head><body>
   <header><div class="inst">Projeto Empreende BB · Escola Deputado Renê Barbour · Barra do Bugres – MT · Coordenação: Prof. Dr. Ramão Humberto Martins Manvailer · UNEMAT</div>
@@ -1370,17 +1428,18 @@ function relatorioHTML(){
   <div class="sub">Sócios: ${t(E.socios)} · Turma: ${t(E.turma)} · ${H.length} ${H.length===1?'mês fechado':'meses fechados'} · próximo: mês ${S.rodada} (${esc(mesNome(S.rodada))}) · Gerado em ${hoje}</div></header>
   <h2>1. Resumo</h2><div class="grid">${kp('Caixa',brl(S.caixa))}${kp('Patrimônio líquido',brl(pat))}${kp('Retorno sobre o capital',pct((pat-S.capital)/S.capital))}${kp('Reputação',num(S.reputacao)+'/100')}
    ${kp('Meses fechados',H.length)}${kp('Receita acumulada',brl(tot.rec))}${kp('Lucro acumulado',brl(tot.luc))}${kp('Pizzas vendidas',num(tot.pz))}
-   ${kp('Dívida bancária',brl(S.divida))}${kp('Fornos',`${S.fornos} · ${num(capForno())} pizzas/mês`)}${kp('Equipe contratada',S.funcionarios.length+' pessoa(s)')}${kp('Missões',`${done} de ${MISSOES.length} · ${nivel}`)}</div>
+   ${kp('Dívida bancária',brl(S.divida))}${kp('Fornos',`${S.fornos} · ${num(capForno())} pizzas/mês`)}${kp('Equipe contratada',S.funcionarios.length+' pessoa(s)')}${kp('Missões',`${done} de ${MISSOES.length} · ${nivel}`)}${peU?kp('Ponto de equilíbrio (último mês)',isFinite(peU.pe)?`${brl(peU.pe)}${peU.pz!=null?' · '+num(peU.pz)+' pizzas':''}`:'sem margem positiva'):''}${peU?kp('Margem de segurança (último mês)',peU.ms!=null?pct(peU.ms):'—'):''}</div>
   <h2>2. Identidade e modelo de negócio</h2><dl><dt>Missão</dt><dd>${t(E.missao)}</dd>${CANVAS_ROT.map(([k,l])=>`<dt>${l}</dt><dd>${t((S.canvas||{})[k])}</dd>`).join('')}</dl>
   <h2>3. Marca</h2><dl><dt>Arquitetura</dt><dd>${t(arq)}</dd><dt>Nome da marca</dt><dd>${t(M.nome)}</dd><dt>Slogan</dt><dd>${t(M.slogan)}</dd><dt>Personalidade</dt><dd>${t((M.personalidade||[]).join(', '))}</dd><dt>Símbolo</dt><dd>${t(SIMBOLOS[M.simbolo]||M.simbolo)}</dd><dt>Público-alvo</dt><dd>${t(M.publico)}</dd><dt>Benefício principal</dt><dd>${t(M.beneficio)}</dd><dt>Diferencial</dt><dd>${t(M.diferencial)}</dd><dt>Declaração de posicionamento</dt><dd>${fraseMarca()}</dd><dt>Força da marca</dt><dd>${pct(forcaMarca())}</dd></dl>
   <h2>4. Cardápio, preços e PCP</h2>${cardapio}
   <h2>5. Canais, estrutura e equipe</h2><dl><dt>Delivery próprio</dt><dd>${S.canal.delivery?`Ativo · taxa de entrega ${brl(S.canal.taxa)}`:'Desativado'}</dd><dt>Aplicativo de delivery</dt><dd>${S.canal.app?`Ativo · acréscimo de ${num(S.canal.markup)}% no preço do app`:'Não utiliza'}</dd><dt>Fornos</dt><dd>${S.fornos} forno(s), capacidade de ${num(capForno())} pizzas por mês</dd><dt>Equipe</dt><dd>${func}</dd><dt>Clientes cadastrados</dt><dd>${t(S.clientes.map(c=>c.nome).join(', '))}</dd><dt>Fornecedores da agricultura familiar</dt><dd>${t(afF.join(', '))}</dd><dt>Dívida e juros</dt><dd>${brl(S.divida)} em empréstimos</dd></dl>
   <h2>6. Resultados mês a mês (DRE resumida, em R$)</h2>${dre}
-  <h2>7. Operação mês a mês</h2>${ops}
-  <h2>8. Encomendas e vendas diretas</h2>${b2b}
-  <h2>9. Marketing</h2>${mk}
-  <h2>10. Missões</h2><ul class="m">${ms.map(([m,ok])=>`<li>${ok?'✔':'○'} ${esc(m.t)}</li>`).join('')}</ul>
-  <h2>11. Comentários do professor</h2><div class="obs"></div>
+  <h2>7. Ponto de equilíbrio mês a mês (em R$)</h2>${peT}
+  <h2>8. Operação mês a mês</h2>${ops}
+  <h2>9. Encomendas e vendas diretas</h2>${b2b}
+  <h2>10. Marketing</h2>${mk}
+  <h2>11. Missões</h2><ul class="m">${ms.map(([m,ok])=>`<li>${ok?'✔':'○'} ${esc(m.t)}</li>`).join('')}</ul>
+  <h2>12. Comentários do professor</h2><div class="obs"></div>
   <footer>Relatório gerado pelo ERP Pizzaria do projeto Empreende BB. Valores em reais; CMV = custo dos ingredientes ÷ preço; % AF = parte das compras feita da agricultura familiar.</footer>
   </body></html>`;
 }
@@ -1399,6 +1458,8 @@ function relatorioCsv(){
   L.push(q('RESULTADOS MÊS A MÊS'));
   L.push(['Mês','Receita','Taxas de entrega','Impostos','CMV','Perdas','Lucro bruto','Comissão app','Entregas','Salários','Fixos','Depreciação','Marketing','Rescisões','Juros','Lucro líquido','Caixa','Reputação','Pizzas','Pedidos','% agricultura familiar'].map(q).join(';'));
   (S.hist||[]).forEach(x=>L.push([q(`M${x.r} ${x.mes}`),n(x.receita),n(x.taxas),n(x.imposto),n(x.cpv),n(x.perdas),n(x.lbruto),n(x.comissao),n(x.entregas),n(x.salarios),n(x.fixos),n(x.dep),n(x.mkt),n(x.resc),n(x.juros),n(x.lucro),n(x.caixa),n(x.rep),n(x.pizzas),n(x.pedidos),x.afPct!=null?n(x.afPct*100):''].join(';')));
+  L.push('',q('PONTO DE EQUILÍBRIO MÊS A MÊS'),['Mês','Receita','Custos fixos','Margem de contribuição %','Ponto de equilíbrio','Pizzas para empatar','Pizzas vendidas','Margem de segurança %','Situação'].map(q).join(';'));
+  (S.hist||[]).forEach(x=>{const e=_peMes(x),ok=isFinite(e.pe)&&x.receita>=e.pe;L.push([q(`M${x.r} ${x.mes}`),n(x.receita),n(e.cf),n(e.mcp*100),isFinite(e.pe)?n(e.pe):'',e.pz!=null?n(e.pz):'',n(x.pizzas),e.ms!=null?n(e.ms*100):'',q(ok?'Acima':'Abaixo')].join(';'))});
   L.push('',q('CARDÁPIO'),['Produto','Preço','Concorrente','Custo unitário','Estratégia','Estoque'].map(q).join(';'));
   S.produtos.forEach(p=>L.push([q(p.nome),n(p.preco),n(p.conc),n(p.cm),q(p.tipo==='bebida'?'Revenda':cfg(p).politica),n(p.estoque)].join(';')));
   L.push('',q('MARKETING'),['Mês','% da receita','Investido','Vendas extras','Margem extra','ROI %'].map(q).join(';'));
