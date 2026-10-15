@@ -1184,14 +1184,14 @@ function relatorioHTML(){
   .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.k{border:1px solid #d9cdbb;border-radius:6px;padding:6px 8px}.k span{display:block;font-size:8.5pt;color:#6b6157}.k b{font-size:12pt}
   table{width:100%;border-collapse:collapse;font-size:8.5pt;break-inside:auto}th,td{border:1px solid #d9cdbb;padding:4px 4px;text-align:right;white-space:nowrap}th{white-space:normal}th:first-child,td:first-child{text-align:left}th{background:#f3ebdf}
   tr{break-inside:avoid}.tot td{font-weight:700;background:#faf6ef}.pos{color:#2f6b3b;font-weight:700}.neg{color:#b23a2a;font-weight:700}
-  dl{display:grid;grid-template-columns:34% 66%;gap:4px 10px;margin:0}dt{font-weight:700}dd{margin:0;white-space:pre-wrap}
+  dl{display:grid;grid-template-columns:32% minmax(0,1fr);gap:4px 10px;margin:0}dt{font-weight:700}dd{margin:0;white-space:pre-wrap}
   .vazio{color:#9a8f84;font-style:italic}ul.m{columns:2;margin:0;padding-left:0;list-style:none}ul.m li{margin:2px 0}
   .obs{border:1px solid #d9cdbb;border-radius:6px;height:120px;margin-top:6px}
   footer{margin-top:18px;font-size:8.5pt;color:#6b6157;border-top:1px solid #d9cdbb;padding-top:6px}
   </style></head><body>
   <header><div class="inst">Projeto Empreende BB · Escola Deputado Renê Barbour · Barra do Bugres – MT · Coordenação: Prof. Dr. Ramão Humberto Martins Manvailer · UNEMAT</div>
   <h1>${esc(E.nome||'Empresa')}</h1><div class="sub">${esc(E.slogan||'')}</div>
-  <div class="sub">Sócios: ${t(E.socios)} · Turma: ${t(E.turma)} · Situação no mês ${S.rodada} (${esc(mesNome(S.rodada))}) · Gerado em ${hoje}</div></header>
+  <div class="sub">Sócios: ${t(E.socios)} · Turma: ${t(E.turma)} · ${H.length} ${H.length===1?'mês fechado':'meses fechados'} · próximo: mês ${S.rodada} (${esc(mesNome(S.rodada))}) · Gerado em ${hoje}</div></header>
   <h2>1. Resumo</h2><div class="grid">${kp('Caixa',brl(S.caixa))}${kp('Patrimônio líquido',brl(pat))}${kp('Retorno sobre o capital',pct((pat-S.capital)/S.capital))}${kp('Reputação',num(S.reputacao)+'/100')}
    ${kp('Meses fechados',H.length)}${kp('Receita acumulada',brl(tot.rec))}${kp('Lucro acumulado',brl(tot.luc))}${kp('Missões',`${done.length} de ${MISSOES.length} · ${nivel}`)}</div>
   <h2>2. Identidade e modelo de negócio</h2><dl><dt>Missão</dt><dd>${t(E.missao)}</dd>${CANVAS_ROT.map(([k,l])=>`<dt>${l}</dt><dd>${t((S.canvas||{})[k])}</dd>`).join('')}</dl>

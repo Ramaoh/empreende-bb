@@ -1,0 +1,30 @@
+{
+ "id": "./marketing.html",
+ "name": "ERP Doce Cerrado · Marketing",
+ "short_name": "Doce Cerrado",
+ "description": "ERP Doce Cerrado, edição Marketing: UNEMAT, Curso de Engenharia de Produção Agroindustrial.",
+ "lang": "pt-BR",
+ "start_url": "./marketing.html",
+ "scope": "./marketing",
+ "display": "standalone",
+ "background_color": "#F2F4EC",
+ "theme_color": "#2D5B45",
+ "icons": [
+  {
+   "src": "icone-doces-192.png",
+   "sizes": "192x192",
+   "type": "image/png"
+  },
+  {
+   "src": "icone-doces-512.png",
+   "sizes": "512x512",
+   "type": "image/png"
+  },
+  {
+   "src": "icone-doces-maskable.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  }
+ ]
+}
