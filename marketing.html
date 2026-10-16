@@ -434,7 +434,7 @@ const MISSOES=[
   {id:'mktroi',t:'Marketing que se paga',d:'Feche um mês investindo até 5% da receita bruta em marketing, com ROI positivo.',ok:()=>(S.mktHist||[]).some(m=>m.gasto>0&&m.pct<=5&&m.roi>0)}
 ];
 const NAV=[
-  ['Visão geral',[['painel','Painel'],['plano','Plano de negócio'],['marca','Marca']]],
+  ['Visão geral',[['painel','Painel'],['reuniao','Reunião do mês'],['plano','Plano de negócio'],['marca','Marca']]],
   ['Operação',[['produtos','Produtos e preços'],['pcp','PCP: planejamento'],['compras','Compras e estoque'],['producao','Produção'],['vendas','Vendas e clientes']]],
   ['Gestão',[['mercado','Marketing'],['financeiro','Financeiro'],['pessoas','Pessoas'],['relatorios','Relatórios']]],
   ['Aprender',[['missoes','Missões e glossário']]]
@@ -470,6 +470,8 @@ function migrar(o){
   o.marca=o.marca||{arquitetura:'unica',nome:'',slogan:'',publico:'',beneficio:'',diferencial:'',personalidade:[],cor:'#2D5B45',cor2:'#E3A52A',simbolo:'folha',produtos:{}};
   o.pcpSel=o.pcpSel||(o.produtos[0]&&o.produtos[0].id);
   o.stats=Object.assign({metodo:0,politica:0,precisao:0},o.stats||{});
+  o.reunioes=o.reunioes||{};
+  o.produtos.forEach(p=>{if(p.conc>0)p.preco=r2(clamp(p.preco,Math.ceil(p.conc*0.8*20)/20,Math.floor(p.conc*1.2*20)/20))});
   o.produtos.forEach(p=>{if(p.espera==null)p.espera=ESPERA0[p.id]??0.6});
   if(o.mes&&o.mes.planejou==null)o.mes.planejou=false;
   return o;
@@ -765,6 +767,7 @@ function registrarVenda(p,q,preco,cliente,forma){
   const total=r2(q*preco);
   p.estoque=r4(p.estoque-q);
   S.mes.receita+=total;S.mes.cpv+=q*p.cm;
+  {const bp=(S.mes.b2bP=S.mes.b2bP||{}),o=bp[p.id]=bp[p.id]||{q:0,rec:0,cpv:0};o.q+=q;o.rec=r2(o.rec+total);o.cpv=r2(o.cpv+q*p.cm)}
   S.vendas.push({r:S.rodada,cliente,produto:p.nome,qtd:q,preco,total,forma});
   if(forma==='prazo')S.receber.push({desc:`${cliente}: ${num(q)} ${p.un} de ${p.nome}`,valor:total,vence:S.rodada+1});
   else mov('e','Vendas',`${cliente}: ${num(q)} ${p.un} de ${p.nome}`,total);
@@ -791,6 +794,20 @@ const A={
     for(const i of S.insumos){const q=sug[i.id]||0;if(q<=0)continue;i.cm=r4((i.estoque*(i.cm||i.preco)+q*i.preco)/(i.estoque+q));i.estoque=r4(i.estoque+q);registraCompra(i,r2(q*i.preco));mov('s','Compras',`Compra planejada: ${num(q)} ${i.un} de ${i.nome}`,q*i.preco)}
     S.stats.compras++;S.mes.comprou=true;save();render();toast(`Compra planejada concluída: ${itens} insumos por ${brl(total)}.`);
   },
+  preComprar(b){
+    const forma=b.dataset.v,fat=forma==='prazo'?1+PRAZO_ACRESC:1,sug=sugestoes(),L=S.insumos.filter(i=>(sug[i.id]||0)>0);
+    if(!L.length)return toast('O estoque já cobre a previsão deste mês.');
+    const total=L.reduce((a,i)=>a+r2(sug[i.id]*r4(i.preco*fat)),0);
+    if(forma==='vista'&&total>S.caixa+0.001)return toast(`A compra à vista custa ${brl(total)} e há ${brl(S.caixa)} em caixa. Compre a prazo.`,true);
+    for(const i of L){const q=sug[i.id],unit=r4(i.preco*fat),t=r2(q*unit),forn=(S.fornecedores.find(f=>f.id===i.forn)||{}).nome||'Fornecedor';
+      i.cm=r4((i.estoque*(i.cm||unit)+q*unit)/(i.estoque+q));i.estoque=r4(i.estoque+q);registraCompra(i,t);
+      if(forma==='prazo')S.pagar.push({desc:`${forn}: ${num(q)} ${i.un} de ${i.nome}`,valor:t,vence:S.rodada+1});else mov('s','Compras',`Compra planejada: ${num(q)} ${i.un} de ${i.nome}`,t)}
+    S.stats.compras++;S.mes.comprou=true;save();render();abrirPreFechar();
+    toast(`Compra concluída: ${L.length} insumos por ${brl(total)}${forma==='prazo'?', a pagar no fim do próximo mês':''}.`);
+  },
+  preProduzir(){A.produzirPlano();abrirPreFechar()},
+  reuniaoPdf(){_imprimir(reuniaoHTML())},
+  abrirReuniao(){go('reuniao')},
   produzir(b){
     const p=prod(b.dataset.id),q=Math.floor(nval('p_'+p.id));
     if(cfg(p).politica==='MTO')return toast(`${p.nome} está como MTO (sob encomenda): é produzido no fechamento do mês, conforme a procura. Para produzir para estoque, mude a estratégia no PCP.`,true);
@@ -869,6 +886,7 @@ const A={
   novoProduto(){
     const n=val('np_n').trim(),pr=nval('np_p'),cc=nval('np_c'),h=nval('np_h')/60,base=Math.floor(nval('np_b'));
     if(!n||!(pr>0)||!(cc>0)||!(h>0)||!(base>0))return toast('Preencha nome, preço, preço do concorrente, minutos por unidade e procura estimada.',true);
+    if(pr<cc*(1-FAIXA_PRECO)-1e-9||pr>cc*(1+FAIXA_PRECO)+1e-9)return toast(`O preço precisa ficar entre ${brl(cc*(1-FAIXA_PRECO))} e ${brl(cc*(1+FAIXA_PRECO))}: até ${Math.round(FAIXA_PRECO*100)}% acima ou abaixo do concorrente.`,true);
     const ficha={};S.insumos.forEach(i=>{const q=nval('npf_'+i.id);if(q>0)ficha[i.id]=q});
     if(!Object.keys(ficha).length)return toast('A ficha técnica precisa de pelo menos um insumo.',true);
     S.produtos.push({id:uid(),nome:n,un:val('np_u').trim()||'un',preco:pr,conc:cc,base,horas:r4(h),perecivel:val('np_per')==='sim',ficha,faixa:[Math.max(5,Math.round(base*0.15)),Math.max(10,Math.round(base*0.35))],espera:clamp((nval('np_esp')||50)/100,0,1),lote:Math.max(1,Math.floor(nval('np_lote')||1)),estoque:0,cm:0});
@@ -915,6 +933,30 @@ function sugestoes(){
 }
 
 /* ====================== fechar o mês ====================== */
+function previsaoCaixa(){
+  const L=S.produtos.map(p=>{const pl=plano(p),pv=cfg(p).politica==='MTO'?p.preco*(1+PREMIO_MTO):p.preco,c=custoPadrao(p);return {p,q:pl.esperado,ent:pv*(1-IMPOSTO),mc:pv*(1-IMPOSTO)-c}});
+  const qPrev=L.reduce((a,x)=>a+x.q,0),entV=L.reduce((a,x)=>a+x.q*x.ent,0),mcT=L.reduce((a,x)=>a+x.q*x.mc,0),mc=qPrev?mcT/qPrev:0;
+  const melhor=L.filter(x=>x.mc>0).sort((a,b)=>b.mc/Math.max(b.p.horas,0.001)-a.mc/Math.max(a.p.horas,0.001))[0];
+  const venc=S.pagar.filter(x=>x.vence<=S.rodada).reduce((a,x)=>a+x.valor,0),receber=S.receber.filter(x=>x.vence<=S.rodada).reduce((a,x)=>a+x.valor,0);
+  const saidas=folha()+fixosTot()+orcMkt()+S.divida*JUROS+venc,sug=sugestoes(),compra=S.insumos.reduce((a,i)=>a+(sug[i.id]||0)*i.preco,0);
+  const fim=S.caixa+entV+receber-saidas-compra,deficit=fim<0?-fim:0,extra=deficit&&mc>0?Math.ceil(deficit/mc):0;
+  const hLivre=Math.max(0,horasTot()-S.horasUsadas-mrp().horas);
+  return {qPrev,ent:qPrev?entV/qPrev:0,entV,mc,saidas,venc,receber,compra,fim,deficit,extra,melhor,extraMelhor:melhor&&deficit?Math.ceil(deficit/melhor.mc):0,hLivre};
+}
+function blocoInsumos(){
+  const sug=sugestoes(),L=S.insumos.filter(i=>(sug[i.id]||0)>0),{need}=mrp();
+  const tot=L.reduce((a,i)=>a+sug[i.id]*i.preco,0),totP=L.reduce((a,i)=>a+r2(sug[i.id]*r4(i.preco*(1+PRAZO_ACRESC))),0);
+  const mts=S.produtos.filter(p=>{const pl=plano(p);return pl.pol==='MTS'&&pl.produzir>0});
+  if(!L.length&&!mts.length)return `<div class="alert good"><b>Insumos</b><span>O estoque cobre a previsão de vendas deste mês.</span></div>`;
+  return `<div class="panel" style="margin:0;padding:14px"><h3 style="margin:0 0 6px">Necessidade de insumos para o mês</h3>
+   ${L.length?`<p class="small muted" style="margin:0 0 8px">Passo 1 · Comprar. O ERP somou os insumos do plano de produção (PCP) e descontou o que já está em estoque.</p>
+   <div class="tbl"><table><thead><tr><th>Insumo</th><th class="n">Precisa</th><th class="n">Tem</th><th class="n">Comprar</th><th class="n">Custo</th></tr></thead><tbody>
+   ${L.map(i=>`<tr><td>${esc(i.nome)}${insAF(i)?' <span class="pill good">AF</span>':''}</td><td class="n">${num(r2(need[i.id]||0))} ${esc(i.un)}</td><td class="n">${num(r2(i.estoque))}</td><td class="n"><b>${num(sug[i.id])}</b></td><td class="n">${brl(sug[i.id]*i.preco)}</td></tr>`).join('')}
+   <tr><td colspan="4"><b>Total à vista</b></td><td class="n"><b>${brl(tot)}</b></td></tr></tbody></table></div>
+   <div class="acts" style="justify-content:flex-start;flex-wrap:wrap"><button class="btn pri" data-act="preComprar" data-v="vista" type="button" ${tot>S.caixa+0.001?'disabled':''}>Comprar tudo à vista · ${brl(tot)}</button><button class="btn" data-act="preComprar" data-v="prazo" type="button">Comprar a prazo · ${brl(totP)} (paga no mês seguinte)</button></div>
+   ${tot>S.caixa+0.001?`<p class="small" style="color:var(--bad)">O caixa (${brl(S.caixa)}) não cobre a compra à vista. Compre a prazo (+3%) ou veja o alerta de caixa abaixo.</p>`:''}`:''}
+   ${mts.length?`<p class="small muted" style="margin:10px 0 6px">${L.length?'Passo 2 · ':''}Produzir para estoque (MTS): ${esc(mts.map(p=>`${num(plano(p).produzir)} ${p.un} de ${p.nome}`).join('; '))}.${L.length?' Compre antes, para ter os insumos.':''}</p><div class="acts" style="justify-content:flex-start"><button class="btn" data-act="preProduzir" type="button">Produzir o plano do PCP</button></div>`:''}</div>`;
+}
 function abrirPreFechar(){
   const avisos=[];
   S.produtos.forEach(p=>{const pl=plano(p);
@@ -923,12 +965,17 @@ function abrirPreFechar(){
   });
   const venc=S.pagar.filter(x=>x.vence<=S.rodada).reduce((a,x)=>a+x.valor,0);
   const saidas=folha()+fixosTot()+orcMkt()+S.divida*JUROS+venc;
-  if(saidas>S.caixa)avisos.push(`<div class="alert bad"><b>Caixa</b><span>As saídas previstas (${brl(saidas)}) superam o caixa atual (${brl(S.caixa)}). Sem vendas suficientes, o banco cobrirá a diferença com cheque especial (tarifa de 8%).</span></div>`);
+  const pc=previsaoCaixa();
+  if(pc.deficit>0)avisos.push(`<div class="alert bad"><b>Caixa descoberto</b><span>Pela previsão, o caixa termina o mês em <b>${brl(pc.fim)}</b>. Para evitar o empréstimo e o cheque especial (tarifa de 8%), vendam cerca de <b>${num(pc.extra)} unidades a mais</b> neste mês: cada unidade extra deixa ~${brl(pc.mc)} de margem (${brl(pc.deficit)} ÷ ${brl(pc.mc)})${pc.melhor?`, ou ~${num(pc.extraMelhor)} ${esc(pc.melhor.p.un)} de ${esc(pc.melhor.p.nome)}, o produto que mais deixa margem por hora de produção`:''}. Restam ~${num(pc.hLivre)} horas de produção livres depois do plano. Como vender mais: aceitar os pedidos de clientes, fazer vendas diretas ou reforçar a divulgação. Outras saídas: comprar insumos a prazo, reduzir o marketing ou adiar contratações.</span></div>`);
+  else if(saidas>S.caixa)avisos.push(`<div class="alert warn"><b>Caixa</b><span>As saídas fixas (${brl(saidas)}) superam o caixa atual (${brl(S.caixa)}), mas as vendas previstas devem cobrir a diferença: o caixa deve terminar em ~${brl(pc.fim)}.</span></div>`);
   if(S.pedidos.length)avisos.push(`<div class="alert warn"><b>Pedidos</b><span>${S.pedidos.length} pedido(s) de clientes ainda sem resposta vão expirar.</span></div>`);
   $('#modal').innerHTML=`<div class="box" role="dialog" aria-modal="true" aria-labelledby="mt">
     <p class="eyebrow">Mês ${S.rodada} · ${mesNome(S.rodada)}</p><h2 id="mt">Fechar o mês?</h2>
     <p class="muted">O mercado vai comprar o que estiver no estoque, os produtos MTO serão produzidos sob encomenda, o marketing será aplicado, as contas serão pagas e a DRE será gerada. Depois disso não dá para voltar.</p>
+    ${_reunTem(S.rodada)?(()=>{const R=_reun(S.rodada);return `<div class="alert warn"><b>Decisões da reunião</b><span>${[R.meta?`Meta: ${esc(R.meta)}`:'',AREAS_REUN.filter(([k])=>(R.areas[k]||'').trim()).map(([k,l])=>`<b>${l}:</b> ${esc(R.areas[k])}`).join(' · ')].filter(Boolean).join('. ')}. Confiram se tudo foi feito.</span></div>`})():`<div class="alert warn"><b>Reunião do mês</b><span>A equipe ainda não registrou as decisões deste mês. <button class="btn sm" data-act="abrirReuniao" type="button">Abrir a reunião</button></span></div>`}
+    ${blocoInsumos()}
     ${avisos.length?`<div class="list" style="display:flex;flex-direction:column;gap:8px">${avisos.join('')}</div>`:'<div class="alert good"><b>Tudo pronto</b><span>Estoque cobre a previsão e o caixa aguenta as saídas.</span></div>'}
+    <div class="formula">Caixa previsto no fim do mês = caixa ${brl(S.caixa)} + vendas previstas ~${num(pc.qPrev)} unidades (${brl(pc.entV)} líquidos)${pc.receber?` + a receber ${brl(pc.receber)}`:''} − saídas ${brl(pc.saidas)}${pc.compra?` − compras pendentes ${brl(pc.compra)}`:''} = <b>${brl(pc.fim)}</b> (estimativa)</div>
     <div class="formula">Saídas previstas: salários ${brl(folha())} · fixos ${brl(fixosTot())} · marketing ${brl(orcMkt())} · juros ${brl(S.divida*JUROS)} · contas a pagar ${brl(venc)} · impostos 6% sobre as vendas</div>
     <div class="acts"><button class="btn" data-act="fecharModal" type="button">Voltar e ajustar</button><button class="btn acc" data-act="fechar" type="button">Fechar o mês</button></div></div>`;
   $('#modal').hidden=false;
@@ -937,7 +984,7 @@ function fecharMes(){
   const r=S.rodada,ev=S.evento,res={r,mes:mesNome(r),evento:ev.titulo,prods:[],licoes:[]};
   const mBase=receitaBaseMkt(),mPct=S.mkt.pct||0,mLim=S.mkt.limite||5,gasto=orcMkt(),sh=sharesMkt();
   const prevMade={};S.produtos.forEach(p=>prevMade[p.id]=previsao(p).valor);
-  let recM=0,cpvM=0,perdasV=0,demT=0,vendT=0,incUn=0,incRec=0,incMarg=0;
+  const custP={};let recM=0,cpvM=0,perdasV=0,demT=0,vendT=0,incUn=0,incRec=0,incMarg=0;
   // produtos MTS vendem do estoque; depois os MTO são produzidos com as horas livres
   const ordem=[...S.produtos].sort((a,b)=>(cfg(a).politica==='MTO')-(cfg(b).politica==='MTO'));
   ordem.forEach(p=>{
@@ -954,7 +1001,8 @@ function fecharMes(){
     const cmV=p.cm,rec=r2(vend*precoV);recM+=rec;cpvM+=vend*cmV;p.estoque=r4(p.estoque-vend);vendT+=vend;
     const inc=Math.max(0,vend-vendSem);incUn+=inc;incRec+=inc*precoV;incMarg+=inc*(precoV*(1-IMPOSTO)-cmV);
     if(vend>0)S.vendas.push({r,cliente:mto?'Encomendas (varejo)':'Consumidores (varejo)',produto:p.nome,qtd:vend,preco:precoV,total:rec,forma:'vista'});
-    let perda=0;if(p.perecivel&&p.estoque>0){perda=Math.ceil(p.estoque*0.2);perdasV+=perda*p.cm;p.estoque-=perda}
+    custP[p.id]={q:vend,rec,cpv:r2(vend*cmV),perdaV:0};
+    let perda=0;if(p.perecivel&&p.estoque>0){perda=Math.ceil(p.estoque*0.2);perdasV+=perda*p.cm;p.estoque-=perda;custP[p.id].perdaV=r2(perda*p.cm)}
     const hh=(S.demHist[p.id]=S.demHist[p.id]||[]);
     hh.push({r,dem,vend,falta:dem-vend,perda,prev:prevMade[p.id],f:r4(fSinais(c)),extra:c.extra,pol:mto?'MTO':'MTS'});
     if(hh.length>24)S.demHist[p.id]=hh.slice(-24);
@@ -981,6 +1029,7 @@ function fecharMes(){
   const cAF=S.mes.compraAF||0,cTot=S.mes.compraTot||0,afPct=cTot?cAF/cTot:0;if(cTot>0&&afPct>=0.5)dRep+=1;
   S.reputacao=clamp(Math.round(S.reputacao+dRep),0,100);
   const dre={r,mes:mesNome(r),receita,imposto,rliq,cpv:cpv,perdas:r2(perdasV),lbruto,salarios:sal,fixos:fix,mkt,resc:S.mes.rescisao,juros:jur,lucro,caixa:S.caixa,rep:S.reputacao,evento:ev.titulo,b2b:r2(S.mes.receita),compraAF:r2(cAF),compraTot:r2(cTot),afPct};
+  {const sc={};S.funcionarios.forEach(f=>{sc[f.cargo]=r2((sc[f.cargo]||0)+f.salario*(1+ENCARGOS))});dre.custP=custP;dre.b2bP=S.mes.b2bP||{};dre.salCargo=sc;dre.horas=S.horasUsadas;dre.horasTot=horasTot();dre.unidades=Object.values(custP).reduce((a,c)=>a+c.q,0)+Object.values(S.mes.b2bP||{}).reduce((a,c)=>a+c.q,0)}
   S.hist.push(dre);res.dre=dre;res.dRep=dRep;res.taxa=taxa;
   const roi=gasto>0?(incMarg-gasto)/gasto:null;
   const mk={r,mes:mesNome(r),base:mBase,pct:mPct,limite:mLim,gasto,receita,pctReal:receita?gasto/receita:0,canais:{...S.mkt.canais},foco:S.mkt.foco,incUn,incRec:r2(incRec),incMarg:r2(incMarg),roi,repMkt,pedExtra};
@@ -1037,7 +1086,7 @@ function mostrarResultado(res){
     <h3>O que este mês ensinou</h3>
     <div style="display:flex;flex-direction:column;gap:8px">${res.licoes.map(([k,t])=>k==='tip'?`<p class="tip"><b>Lição do evento:</b> ${esc(t)}</p>`:`<div class="alert ${k}"><span>${esc(t)}</span></div>`).join('')}</div>
     <div class="news"><span class="tag">Notícia para ${mesNome(S.rodada)}</span><h3>${esc(S.evento.titulo)}</h3><p>${esc(S.evento.texto)}</p></div>
-    <div class="acts"><button class="btn" data-act="ir" data-v="relatorios" type="button">Ver DRE completa</button><button class="btn pri" data-act="fecharModal" type="button">Começar ${mesNome(S.rodada)}</button></div></div>`;
+    <div class="acts"><button class="btn" data-act="ir" data-v="relatorios" type="button">Ver DRE completa</button><button class="btn" data-act="fecharModal" type="button">Começar ${mesNome(S.rodada)}</button><button class="btn pri" data-act="abrirReuniao" type="button">Reunião de ${mesNome(S.rodada)}</button></div></div>`;
   $('#modal').hidden=false;
 }
 
@@ -1067,6 +1116,7 @@ const head=(eb,t,l)=>`<section class="head"><p class="eyebrow">${eb}</p><h1>${t}
 function rotina(){
   const st=[
     ['Leia a notícia do mês',true,'painel'],
+    ['Reúna a equipe e registre as decisões',_reunTem(S.rodada),'reuniao'],
     ['Planeje a produção no PCP',S.mes.planejou,'pcp'],
     ['Compre os insumos',S.mes.comprou,'compras'],
     ['Produza os lotes',S.mes.produziu,'producao'],
@@ -1158,7 +1208,191 @@ async function baixarTexto(nome,data,mime){
   catch(e){toast('Não foi possível baixar o arquivo neste navegador.',true)}
 }
 const CANVAS_ROT=[['segmentos','Segmentos de clientes'],['proposta','Proposta de valor'],['canais','Canais'],['relacionamento','Relacionamento'],['receitas','Fontes de receita'],['recursos','Recursos principais'],['atividades','Atividades-chave'],['parcerias','Parcerias principais'],['custos','Estrutura de custos']];
-function _peMes(x){const cf=(x.salarios||0)+(x.fixos||0)+(x.mkt||0)+(x.juros||0)+(x.resc||0),mcp=x.receita?((x.rliq||0)-(x.cpv||0)-(x.perdas||0))/x.receita:0,pe=mcp>0?cf/mcp:Infinity;return {cf,mcp,pe,ms:isFinite(pe)&&x.receita?(x.receita-pe)/x.receita:null}}
+
+/* ====================== custos, rateio e reunião ====================== */
+function unidadesMes(x){if(x.unidades!=null)return x.unidades;return (S.vendas||[]).filter(v=>v.r===x.r).reduce((a,v)=>a+v.qtd,0)}
+function painelCustoFixo(){
+  const itens=[...FIXOS.map(f=>[f.desc,f.cat,f.valor]),...Object.entries(CARGOS).map(([k,c])=>[`Salários e encargos (30%): ${c.nome.toLowerCase()}`,'Pessoas',r2(S.funcionarios.filter(f=>f.cargo===k).reduce((a,f)=>a+f.salario*(1+ENCARGOS),0))]),['Marketing do mês (orçamento)','Marketing',orcMkt()],['Juros dos empréstimos','Banco',r2(S.divida*JUROS)]];
+  const cf=r2(itens.reduce((a,x)=>a+x[2],0)),last=S.hist[S.hist.length-1];
+  let pe='<p class="small muted">Depois do primeiro fechamento, o ERP calcula aqui o ponto de equilíbrio com a margem de contribuição do último mês.</p>';
+  if(last&&last.receita){const cv=last.imposto+last.cpv+last.perdas,mcp=(last.receita-cv)/last.receita;pe=`<div class="formula">Ponto de equilíbrio deste mês = custo fixo ÷ margem de contribuição % = ${brl(cf)} ÷ ${pct(mcp)} = <b>${mcp>0?brl(cf/mcp):'sem margem positiva'}</b><br><span class="small">Margem de contribuição % de ${esc(last.mes)} = (receita ${brl(last.receita)} − custos variáveis ${brl(cv)}) ÷ receita. Como os produtos têm unidades diferentes, o ponto de equilíbrio em unidades é calculado por produto no rateio.</span></div>`}
+  return `<div class="panel"><h2>Custos fixos do mês</h2><p>Custos que a empresa paga mesmo sem vender nada. Aluguel e utilidades não mudam; os demais dependem das decisões da equipe (contratar, investir em marketing, pegar empréstimo).</p>
+   <div class="tbl"><table><thead><tr><th>Custo fixo</th><th>Categoria</th><th class="n">Valor no mês</th></tr></thead><tbody>
+   ${itens.map(([d,c,v])=>`<tr><td>${esc(d)}</td><td><span class="pill mute">${esc(c)}</span></td><td class="n">${brl(v)}</td></tr>`).join('')}
+   <tr><td colspan="2"><b>Custo fixo total</b></td><td class="n"><b>${brl(cf)}</b></td></tr></tbody></table></div>${pe}</div>`;
+}
+function painelCustoVariavel(){
+  const last=S.hist[S.hist.length-1];
+  if(!last)return `<div class="panel"><h2>Custos variáveis</h2><p class="small muted">Os custos variáveis aparecem depois do primeiro fechamento: impostos, custo dos produtos vendidos (insumos) e perdas.</p></div>`;
+  const u=unidadesMes(last),itens=[['Impostos (Simples 6%)','sobre a receita',last.imposto],['Custo dos produtos vendidos (CPV)','insumos da ficha técnica',last.cpv],['Perdas de estoque','produtos e insumos vencidos',last.perdas]];
+  const cv=r2(itens.reduce((a,x)=>a+(x[2]||0),0));
+  return `<div class="panel"><h2>Custos variáveis de ${esc(last.mes)}</h2><p>Custos que crescem junto com as vendas. O custo variável de cada produto está no rateio, logo abaixo.</p>
+   <div class="tbl"><table><thead><tr><th>Custo variável</th><th>Base</th><th class="n">Total no mês</th><th class="n">% da receita</th></tr></thead><tbody>
+   ${itens.map(([d,b,v])=>`<tr><td>${esc(d)}</td><td class="small muted">${esc(b)}</td><td class="n">${brl(v||0)}</td><td class="n">${pct(last.receita?(v||0)/last.receita:0)}</td></tr>`).join('')}
+   <tr><td colspan="2"><b>Custo variável total (CVT)</b></td><td class="n"><b>${brl(cv)}</b></td><td class="n"><b>${pct(last.receita?cv/last.receita:0)}</b></td></tr></tbody></table></div>
+   <div class="formula">Unidades vendidas no mês: ${num(u)} · custo variável médio por unidade = ${brl(cv)} ÷ ${num(u)} = <b>${brl(u?cv/u:0)}</b> · receita média por unidade = <b>${brl(u?last.receita/u:0)}</b><br>Margem de contribuição = receita ${brl(last.receita)} − CVT ${brl(cv)} = <b>${brl(last.receita-cv)}</b></div></div>`;
+}
+function custeioMes(x){
+  if(!x)return null;
+  const map={};const get=(id,nome)=>map[id]=map[id]||{id,nome,qc:0,qb:0,rc:0,rb:0,cpv:0,perdaV:0,horas:(prod(id)||S.catalogo.find(q=>q.id===id)||{}).horas||0};
+  let aprox=false;
+  if(x.custP){
+    for(const [id,c] of Object.entries(x.custP)){const p=prod(id)||S.catalogo.find(q=>q.id===id);const o=get(id,p?p.nome:id);o.qc+=c.q;o.rc+=c.rec;o.cpv+=c.cpv;o.perdaV+=c.perdaV}
+    for(const [id,c] of Object.entries(x.b2bP||{})){const p=prod(id)||S.catalogo.find(q=>q.id===id);const o=get(id,p?p.nome:id);o.qb+=c.q;o.rb+=c.rec;o.cpv+=c.cpv}
+  }else{
+    aprox=true;
+    (S.vendas||[]).filter(v=>v.r===x.r).forEach(v=>{const p=S.produtos.find(q=>q.nome===v.produto)||S.catalogo.find(q=>q.nome===v.produto);const id=p?p.id:v.produto;const o=get(id,v.produto);const cm=p?(p.cm||custoPadrao(p)):0;
+      if(/\(varejo\)/.test(v.cliente)){o.qc+=v.qtd;o.rc+=v.total}else{o.qb+=v.qtd;o.rb+=v.total}o.cpv+=v.qtd*cm});
+    if(S.ultimo&&S.ultimo.r===x.r&&S.ultimo.prods)S.ultimo.prods.forEach(u=>{const o=map[u.id];const p=prod(u.id);if(o&&p)o.perdaV+=u.perda*(p.cm||u.custo)});
+    const tc=Object.values(map).reduce((a,o)=>a+o.cpv,0);if(tc>0)Object.values(map).forEach(o=>o.cpv=o.cpv*x.cpv/tc);
+  }
+  const L=Object.values(map).filter(o=>o.qc+o.qb>0);if(!L.length)return null;
+  const sum=f=>L.reduce((a,o)=>a+f(o),0),perdP=sum(o=>o.perdaV),resto=Math.max(0,(x.perdas||0)-perdP),RB=sum(o=>o.rc+o.rb);
+  L.forEach(o=>{o.q=o.qc+o.qb;o.R=o.rc+o.rb;o.imp=o.R*IMPOSTO;o.per=o.perdaV+(RB?resto*o.R/RB:0);o.CV=o.imp+o.cpv+o.per;o.MC=o.R-o.CV;o.h=o.q*(o.horas||0)});
+  let sc=x.salCargo;if(!sc){sc={};const tot=S.funcionarios.reduce((a,f)=>a+f.salario,0);S.funcionarios.forEach(f=>{sc[f.cargo]=(sc[f.cargo]||0)+(tot?x.salarios*f.salario/tot:0)})}
+  const fx=FIXOS.reduce((a,f)=>a+f.valor,0),k=fx?(x.fixos||0)/fx:1;
+  const pools=[
+    {k:'A',nome:'Produção (cozinha)',itens:`auxiliares de produção ${brl(sc.producao||0)} · aluguel da cozinha, gás, energia e internet ${brl(fx*k)}`,valor:(sc.producao||0)+fx*k,dir:'horas de produção',base:o=>o.h,un:'h'},
+    {k:'B',nome:'Vendas e administração',itens:`vendedores ${brl(sc.vendas||0)}${x.juros?` · juros ${brl(x.juros)}`:''}${x.resc?` · rescisões ${brl(x.resc)}`:''}`,valor:(sc.vendas||0)+(x.juros||0)+(x.resc||0),dir:'receita de cada produto',base:o=>o.R,un:'R$'},
+    {k:'C',nome:'Marketing',itens:`divulgação do mês ${brl(x.mkt||0)}`,valor:x.mkt||0,dir:'receita no varejo',base:o=>o.rc,un:'R$'}];
+  pools.forEach(pl=>{let tb=sum(pl.base),base=pl.base;if(!(tb>0)){base=o=>o.R;tb=sum(base);pl.dir+=' (sem base no mês: rateado pela receita)'}pl.tb=tb;L.forEach(o=>{o['r'+pl.k]=tb?pl.valor*base(o)/tb:0})});
+  L.forEach(o=>{o.CF=pools.reduce((a,pl)=>a+o['r'+pl.k],0);o.lucro=o.MC-o.CF;o.cut=o.q?(o.CV+o.CF)/o.q:0;o.pm=o.q?o.R/o.q:0;o.peq=o.q&&o.MC>0?Math.ceil(o.CF/(o.MC/o.q)):null});
+  const CFt=pools.reduce((a,pl)=>a+pl.valor,0),RT=sum(o=>o.R),QT=sum(o=>o.q);
+  L.forEach(o=>{o.lQ=o.MC-(QT?CFt*o.q/QT:0);o.lR=o.MC-(RT?CFt*o.R/RT:0)});
+  return {x,L,pools,CFt,MCt:sum(o=>o.MC),CVt:sum(o=>o.CV),RT,lucro:sum(o=>o.lucro),aprox};
+}
+function rateioHTML(r,compacto){
+  const x=r?S.hist.find(h=>h.r===r):S.hist[S.hist.length-1],c=custeioMes(x);
+  if(!c)return '<p class="empty">O rateio aparece depois do primeiro mês fechado com vendas.</p>';
+  const L=c.L,n=v=>brl(v),th=L.map(o=>`<th class="n">${esc(o.nome)}</th>`).join('')+'<th class="n">Total</th>',S2=f=>L.reduce((a,o)=>a+f(o),0);
+  const row=(lab,f,tot,cls)=>`<tr${cls?` class="${cls}"`:''}><td>${lab}</td>${L.map(o=>`<td class="n">${f(o)}</td>`).join('')}<td class="n">${tot}</td></tr>`;
+  const pior=[...L].sort((a,b)=>a.lucro/a.R-b.lucro/b.R)[0],melhor=[...L].sort((a,b)=>b.MC/b.R-a.MC/a.R)[0],negMC=L.filter(o=>o.MC<0),eng=L.filter(o=>(o.lucro<0||o.lR<0)&&o.MC>0);
+  return `<p class="small muted">Mês ${x.r} · ${esc(x.mes)} · método: <b>custeio por absorção com rateio por centros de custo</b> (ABC simplificado).${c.aprox?' Mês fechado antes desta versão do ERP: custo e perdas por produto foram estimados.':''}</p>
+  <h3>1. Centros de custo e direcionadores</h3>
+  <div class="tbl"><table><thead><tr><th>Centro de custo</th><th>Custos incluídos</th><th class="n">Valor</th><th>Direcionador</th><th class="n">Taxa de rateio</th></tr></thead><tbody>
+  ${c.pools.map(pl=>`<tr><td><b>${pl.k}. ${pl.nome}</b></td><td class="small">${pl.itens}</td><td class="n">${n(pl.valor)}</td><td class="small">${pl.dir}</td><td class="n">${pl.tb?(pl.un==='R$'?pct(pl.valor/pl.tb)+' da base':`${brl(pl.valor/pl.tb)} por hora`):'—'}</td></tr>`).join('')}
+  <tr class="tot"><td colspan="2"><b>Custos fixos e indiretos do mês</b></td><td class="n"><b>${n(c.CFt)}</b></td><td colspan="2"></td></tr></tbody></table></div>
+  <h3>2. Custos variáveis diretos e margem de contribuição</h3>
+  <div class="tbl"><table><thead><tr><th></th>${th}</tr></thead><tbody>
+  ${row('Quantidade vendida',o=>`${num(o.q)} ${esc((prod(o.id)||{}).un||'un')}`,'')}
+  ${row('Receita',o=>n(o.R),n(c.RT))}
+  ${row('(−) Impostos 6%',o=>n(o.imp),n(S2(o=>o.imp)))}
+  ${row('(−) Custo dos insumos (ficha técnica)',o=>n(o.cpv),n(S2(o=>o.cpv)))}
+  ${row('(−) Perdas',o=>n(o.per),n(S2(o=>o.per)))}
+  ${row('<b>= Custo variável total</b>',o=>n(o.CV),n(c.CVt),'tot')}
+  ${row('Custo variável unitário (CVU)',o=>n(o.q?o.CV/o.q:0),'')}
+  ${row('<b>= Margem de contribuição</b>',o=>`<b>${n(o.MC)}</b>`,`<b>${n(c.MCt)}</b>`,'tot')}
+  ${row('MC por unidade (PV − CVU)',o=>n(o.q?o.MC/o.q:0),'')}
+  ${row('MC %',o=>pct(o.R?o.MC/o.R:0),pct(c.RT?c.MCt/c.RT:0))}</tbody></table></div>
+  <h3>3. Rateio dos custos fixos</h3>
+  <div class="tbl"><table><thead><tr><th></th>${th}</tr></thead><tbody>
+  ${c.pools.map(pl=>row(`${pl.k}. ${pl.nome}`,o=>n(o['r'+pl.k]),n(pl.valor))).join('')}
+  ${row('<b>Custos fixos rateados</b>',o=>`<b>${n(o.CF)}</b>`,`<b>${n(c.CFt)}</b>`,'tot')}</tbody></table></div>
+  <h3>4. Resultado por produto</h3>
+  <div class="tbl"><table><thead><tr><th></th>${th}</tr></thead><tbody>
+  ${row('Margem de contribuição',o=>n(o.MC),n(c.MCt))}
+  ${row('(−) Custos fixos rateados',o=>n(o.CF),n(c.CFt))}
+  ${row('<b>= Lucro do produto</b>',o=>`<b style="color:var(${o.lucro>=0?'--good':'--bad'})">${n(o.lucro)}</b>`,`<b>${n(c.lucro)}</b>`,'tot')}
+  ${row('Margem líquida',o=>pct(o.R?o.lucro/o.R:0),pct(c.RT?c.lucro/c.RT:0))}
+  ${row('Preço médio recebido (PV)',o=>n(o.pm),'')}
+  ${row('<b>Custo unitário total</b>',o=>`<b>${n(o.cut)}</b>`,'')}
+  ${row('Lucro por unidade',o=>n(o.q?o.lucro/o.q:0),'')}
+  ${row('Ponto de equilíbrio do produto (CF rateado ÷ (PV − CVU))',o=>o.peq!=null?`${num(o.peq)} ${esc((prod(o.id)||{}).un||'un')}`:'—','')}</tbody></table></div>
+  <div class="formula">Conferência: soma do lucro dos produtos ${n(c.lucro)} = lucro líquido da DRE ${n(x.lucro)}.<br>Custo unitário total = (custo variável + custos fixos rateados) ÷ quantidade.</div>
+  ${compacto?'':`<h3>5. Comparação com métodos simples</h3>
+  <div class="tbl"><table><thead><tr><th>Lucro do produto</th>${th}</tr></thead><tbody>
+  ${row('Por centros de custo (usado)',o=>n(o.lucro),n(c.lucro))}
+  ${row('Rateio único pela quantidade vendida',o=>n(o.lQ),n(S2(o=>o.lQ)))}
+  ${row('Rateio único pela receita',o=>n(o.lR),n(S2(o=>o.lR)))}</tbody></table></div>`}
+  <h3>${compacto?'5':'6'}. Leitura</h3><ul>
+   ${pior?`<li><b>${esc(pior.nome)}</b> tem a menor margem líquida (${pct(pior.lucro/pior.R)}). Revise preço, receita ou fornecedor.</li>`:''}
+   ${melhor?`<li><b>${esc(melhor.nome)}</b> tem a melhor margem de contribuição (${pct(melhor.MC/melhor.R)}): vale divulgar mais.</li>`:''}
+   ${negMC.map(o=>`<li><b>${esc(o.nome)}</b> tem margem de contribuição negativa: cada venda aumenta o prejuízo. Suba o preço ou retire da oferta.</li>`).join('')}
+   ${eng.map(o=>`<li><b>${esc(o.nome)}</b> pode parecer dar prejuízo depois do rateio, mas tem margem de contribuição positiva (${n(o.MC)}). Retirar o produto não elimina os custos fixos: o lucro da empresa cairia.</li>`).join('')}
+   <li>O rateio serve para formar preço e entender o custo total. Para decidir manter ou cortar um produto, use a margem de contribuição.</li></ul>`;
+}
+const AREAS_REUN=[['precos','Preços e produtos'],['compras','Compras e produção (PCP)'],['vendas','Vendas e clientes'],['mkt','Marketing'],['pessoas','Pessoas'],['fin','Finanças e caixa']];
+function _reun(r){S.reunioes=S.reunioes||{};return S.reunioes[r]=S.reunioes[r]||{presentes:'',meta:'',areas:{}}}
+function _reunTem(r){const x=(S.reunioes||{})[r];return !!x&&(!!(x.meta||'').trim()||Object.values(x.areas||{}).some(v=>(v||'').trim()))}
+function diagMes(){
+  const H=S.hist,last=H[H.length-1],u=S.ultimo,ant=H[H.length-2];if(!last)return null;
+  const e=_peMes(last),dem=u&&u.prods?u.prods.reduce((a,p)=>a+p.dem,0):0,vend=u&&u.prods?u.prods.reduce((a,p)=>a+p.vend,0):0,faltou=u&&u.prods?u.prods.reduce((a,p)=>a+Math.max(0,p.falta),0):0;
+  return {last,ant,e,cpvP:last.receita?last.cpv/last.receita:0,atend:dem?vend/dem:1,faltou,horas:last.horasTot?last.horas/last.horasTot:null,dRep:u&&u.dRep!=null?u.dRep:(ant?last.rep-ant.rep:0),mk:u&&u.mk,u};
+}
+function pautaMes(){
+  const P=[],d=diagMes(),pc=previsaoCaixa();
+  P.push(['Notícia do mês',`“${S.evento.titulo}”: o que muda para a nossa empresa neste mês?`,'']);
+  if(!d){P.push(['Preços e produtos','Primeiro mês: os preços cobrem o custo dos insumos e os impostos? Confiram a margem em Produtos e preços.','']);P.push(['Compras e produção (PCP)','Qual estratégia para cada produto (MTO ou MTS) e quanto comprar para a previsão?','']);P.push(['Pessoas','Quem faz o quê na equipe: gerente, compras e produção, vendas, marketing e finanças?',''])}
+  else{
+    if(d.last.lucro<0)P.push(['Finanças e caixa',`O mês deu prejuízo de ${brl(d.last.lucro)}. O que reduzir ou o que vender mais?`,'bad']);
+    if(isFinite(d.e.pe)&&d.last.receita<d.e.pe)P.push(['Finanças e caixa',`Vendemos ${brl(d.last.receita)}, abaixo do ponto de equilíbrio (${brl(d.e.pe)}). Como chegar lá?`,'bad']);
+    else if(d.e.ms!=null&&d.e.ms<0.15)P.push(['Finanças e caixa',`Margem de segurança de só ${pct(d.e.ms)}: uma queda pequena nas vendas dá prejuízo.`,'warn']);
+    if(d.cpvP>0.45)P.push(['Preços e produtos',`O custo dos insumos foi ${pct(d.cpvP)} da receita. Reajustar preços, rever a receita ou trocar de fornecedor?`,'warn']);
+    if(d.u&&d.u.prods)d.u.prods.filter(p=>p.preco<p.custo*(1+IMPOSTO)).forEach(p=>P.push(['Preços e produtos',`${p.nome} está abaixo do custo mais impostos: subir o preço ou tirar da oferta?`,'bad']));
+    if(d.faltou>0||d.atend<0.95)P.push(['Compras e produção (PCP)',`Atendemos ${pct(d.atend)} da procura${d.faltou?` e faltaram ${num(d.faltou)} unidades`:''}. Aumentar o plano, o estoque de segurança ou as horas de produção?`,d.atend<0.8?'bad':'warn']);
+    if(d.last.perdas>0)P.push(['Compras e produção (PCP)',`Perdas de ${brl(d.last.perdas)} por validade. Produzir mais perto da previsão?`,'warn']);
+    if(d.u&&d.u.prods){const er=d.u.prods.filter(p=>p.dem&&Math.abs(p.prev-p.dem)/p.dem>0.2);if(er.length)P.push(['Compras e produção (PCP)',`A previsão errou mais de 20% em ${er.map(p=>p.nome).join(', ')}. Trocar o método de previsão no PCP?`,'warn'])}
+    if(d.horas!=null&&d.horas>0.9)P.push(['Pessoas',`A produção usou ${pct(d.horas)} das horas. Contratar auxiliar de produção?`,'warn']);
+    else if(d.horas!=null&&d.horas<0.6)P.push(['Vendas e clientes',`A produção usou só ${pct(d.horas)} das horas: há capacidade sobrando. Como vender mais?`,'']);
+    if(d.dRep<0)P.push(['Vendas e clientes',`A reputação caiu ${num(-d.dRep)} ponto(s), para ${num(d.last.rep)}. O que causou?`,'warn']);
+    if(d.mk&&d.mk.gasto>0&&d.mk.roi!=null&&d.mk.roi<0)P.push(['Marketing',`O marketing teve ROI de ${pct(d.mk.roi)}. Mudar as ações ou o percentual?`,'warn']);
+    else if(!d.mk||!d.mk.gasto)P.push(['Marketing','Não investimos em marketing. Vale reservar uma parte para degustação e divulgação?','']);
+  }
+  if(pc.deficit>0)P.push(['Finanças e caixa',`Caixa previsto para o fim do mês: ${brl(pc.fim)}. Vender ~${num(pc.extra)} unidades a mais, comprar a prazo ou reduzir gastos?`,'bad']);
+  if(S.divida>0)P.push(['Finanças e caixa',`Dívida de ${brl(S.divida)}. Amortizar uma parte neste mês?`,'']);
+  if(S.pedidos.length)P.push(['Vendas e clientes',`${S.pedidos.length} pedido(s) de clientes aguardando resposta. Quais aceitar, olhando a margem e a capacidade?`,'']);
+  return P;
+}
+function vReuniao(){
+  const r=S.rodada,R=_reun(r),d=diagMes(),pc=previsaoCaixa(),P=pautaMes(),ant=(S.reunioes||{})[r-1];
+  return head(`Planejamento · Mês ${r} · ${mesNome(r)}`,'Reunião do mês','No início de cada mês, a equipe se reúne por 10 a 15 minutos: olha o resultado do mês anterior, discute a pauta que o ERP preparou e registra as decisões. As decisões ficam salvas e entram no relatório do professor.')+
+  `<div class="acts" style="justify-content:flex-start;margin-bottom:12px"><button class="btn pri" data-act="reuniaoPdf" type="button">Exportar pauta e ata (PDF)</button><button class="btn" data-act="ir" data-v="relatorios" type="button">Ver relatórios completos</button></div>
+  <div class="panel"><h2>1. Como foi o mês anterior</h2>${d?`<div class="kpis">
+    ${kpi('Lucro de '+d.last.mes,brl(d.last.lucro),`margem líquida ${pct(d.last.receita?d.last.lucro/d.last.receita:0)}`,d.last.lucro>=0?'good':'bad')}
+    ${kpi('Receita',brl(d.last.receita),`${num(unidadesMes(d.last))} unidades`)}
+    ${kpi('Ponto de equilíbrio',isFinite(d.e.pe)?brl(d.e.pe):'—',d.e.ms!=null?`margem de segurança ${pct(d.e.ms)}`:'',isFinite(d.e.pe)&&d.last.receita>=d.e.pe?'good':'bad')}
+    ${kpi('Custo dos insumos',pct(d.cpvP),'da receita',d.cpvP<=0.45?'good':'bad')}
+    ${kpi('Procura atendida',pct(d.atend),d.faltou?`faltaram ${num(d.faltou)} unidades`:'sem faltas',d.atend>=0.95?'good':d.atend<0.8?'bad':'')}
+    ${d.horas!=null?kpi('Uso das horas de produção',pct(d.horas),'',d.horas>0.9?'bad':''):''}
+    ${kpi('Reputação',num(d.last.rep),`${d.dRep>=0?'+':''}${num(d.dRep)} no mês`,d.dRep<0?'bad':'')}
+    ${kpi('Caixa atual',brl(S.caixa),S.divida?`dívida ${brl(S.divida)}`:'sem dívidas',S.caixa<0?'bad':'')}</div>
+    ${d.u&&d.u.licoes?`<h3>O que o mês ensinou</h3><div style="display:flex;flex-direction:column;gap:6px">${d.u.licoes.filter(([k])=>k==='bad'||k==='warn').slice(0,6).map(([k,t])=>`<div class="alert ${k}"><span>${esc(t)}</span></div>`).join('')||'<div class="alert good"><span>Nenhum ponto de atenção no mês anterior.</span></div>'}</div>`:''}`
+    :'<p class="empty">É o primeiro mês: ainda não há resultado. Usem a pauta abaixo para planejar a abertura da empresa.</p>'}</div>
+  ${ant&&_reunTem(r-1)?`<div class="panel"><h2>Decisões do mês passado: foram cumpridas?</h2>${ant.meta?`<p><b>Meta:</b> ${esc(ant.meta)}</p>`:''}<ul>${AREAS_REUN.filter(([k])=>(ant.areas[k]||'').trim()).map(([k,l])=>`<li><b>${l}:</b> ${esc(ant.areas[k])}</li>`).join('')}</ul></div>`:''}
+  <div class="panel"><h2>2. O que vem neste mês</h2>
+    <div class="news"><span class="tag">Notícia do mês</span><h3>${esc(S.evento.titulo)}</h3><p>${esc(S.evento.texto)}</p></div>
+    <div class="kpis">${kpi('Unidades previstas',num(pc.qPrev),`horas livres depois do plano ~${num(pc.hLivre)}`)}${kpi('Compras necessárias',brl(pc.compra),pc.compra?'veja Compras e estoque':'estoque cobre a previsão',pc.compra>S.caixa?'bad':'')}${kpi('Caixa previsto no fim do mês',brl(pc.fim),pc.deficit?`vender ~${num(pc.extra)} unidades a mais`:'estimativa',pc.deficit?'bad':'good')}${kpi('Pedidos de clientes',num(S.pedidos.length),'aguardando resposta')}</div></div>
+  <div class="panel"><h2>3. Pauta da reunião</h2><p class="small muted">Gerada automaticamente a partir dos números. Discutam cada ponto e registrem a decisão na área correspondente.</p>
+    <ol class="list">${P.map(([a,q,c])=>`<li><span class="dot todo" style="${c==='bad'?'background:var(--bad);color:#fff':c==='warn'?'background:#c98a1b;color:#fff':''}">${c?'!':'?'}</span><span style="flex:1"><b>${esc(a)}:</b> ${esc(q)}</span></li>`).join('')}</ol></div>
+  <div class="panel"><h2>4. Decisões da equipe</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px">
+      <label class="small">Presentes<input type="text" data-reun="presentes" value="${esc(R.presentes)}" placeholder="Nomes de quem participou" style="width:100%;margin-top:4px"></label>
+      <label class="small">Meta do mês<input type="text" data-reun="meta" value="${esc(R.meta)}" placeholder="Ex.: lucro acima de R$ 1.500 e nenhuma perda por validade" style="width:100%;margin-top:4px"></label>
+      ${AREAS_REUN.map(([k,l])=>`<label class="small">${l}<textarea data-reuna="${k}" placeholder="O que a equipe decidiu? Quem faz?" style="margin-top:4px">${esc(R.areas[k]||'')}</textarea></label>`).join('')}
+    </div><p class="small muted">Salva automaticamente. Antes de fechar o mês, o ERP lembra estas decisões.</p></div>`;
+}
+function reuniaoHTML(){
+  const r=S.rodada,R=_reun(r),d=diagMes(),pc=previsaoCaixa(),P=pautaMes(),E=S.empresa,hoje=new Date().toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});
+  const rel=relatorioHTML(),css=(rel.match(/<style>[\s\S]*?<\/style>/)||[''])[0],inst=(rel.match(/<div class="inst">[\s\S]*?<\/div>/)||[''])[0];
+  const kp=(l,v)=>`<div class="k"><span>${l}</span><b>${v}</b></div>`,sug=sugestoes(),L=S.insumos.filter(i=>(sug[i.id]||0)>0),tot=L.reduce((a,i)=>a+sug[i.id]*i.preco,0);
+  const linhas=n=>Array.from({length:n},()=>'<div style="border-bottom:1px solid #d9cdbb;height:22px"></div>').join('');
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Reunião – ${esc(E.nome||'Empresa')} – mês ${r}</title>${css}</head><body>
+  <header>${inst}<h1>Reunião do mês ${r} · ${esc(mesNome(r))}</h1><div class="sub">${esc(E.nome||'Empresa')} · Turma: ${esc(E.turma||'')} · Gerado em ${hoje}</div></header>
+  <h2>1. Resultado do mês anterior</h2>${d?`<div class="grid">${kp('Lucro de '+esc(d.last.mes),brl(d.last.lucro))}${kp('Receita',brl(d.last.receita))}${kp('Ponto de equilíbrio',isFinite(d.e.pe)?brl(d.e.pe):'—')}${kp('Margem de segurança',d.e.ms!=null?pct(d.e.ms):'—')}${kp('Custo dos insumos',pct(d.cpvP))}${kp('Procura atendida',pct(d.atend))}${d.horas!=null?kp('Uso das horas',pct(d.horas)):''}${kp('Reputação',`${num(d.last.rep)} (${d.dRep>=0?'+':''}${num(d.dRep)})`)}</div>
+   ${d.u&&d.u.licoes?`<ul class="m">${d.u.licoes.filter(([k])=>k==='bad'||k==='warn').slice(0,6).map(([k,t])=>`<li>${k==='bad'?'✖':'⚠'} ${esc(t)}</li>`).join('')}</ul>`:''}`:'<p class="vazio">Primeiro mês: ainda não há resultado.</p>'}
+  <h2>2. Previsão para este mês</h2><div class="grid">${kp('Notícia do mês',esc(S.evento.titulo))}${kp('Unidades previstas',num(pc.qPrev))}${kp('Horas livres depois do plano',num(pc.hLivre))}${kp('Caixa atual',brl(S.caixa))}${kp('Compras necessárias',brl(tot))}${kp('Caixa previsto no fim do mês',brl(pc.fim))}${pc.deficit?kp('Para evitar empréstimo','vender ~'+num(pc.extra)+' unidades a mais'):''}${kp('Pedidos pendentes',num(S.pedidos.length))}</div>
+  ${L.length?`<table><thead><tr><th style="text-align:left">Insumo a comprar</th><th>Quantidade</th><th>Custo</th></tr></thead><tbody>${L.map(i=>`<tr><td style="text-align:left">${esc(i.nome)}</td><td>${num(sug[i.id])} ${esc(i.un)}</td><td>${brl(sug[i.id]*i.preco)}</td></tr>`).join('')}<tr class="tot"><td style="text-align:left">Total à vista</td><td></td><td>${brl(tot)}</td></tr></tbody></table>`:''}
+  <h2>3. Pauta</h2><ol>${P.map(([a,q])=>`<li style="margin-bottom:4px"><b>${esc(a)}:</b> ${esc(q)}</li>`).join('')}</ol>
+  <h2>4. Decisões da equipe</h2><dl><dt>Presentes</dt><dd>${R.presentes?esc(R.presentes):linhas(1)}</dd><dt>Meta do mês</dt><dd>${R.meta?esc(R.meta):linhas(1)}</dd>${AREAS_REUN.map(([k,l])=>`<dt>${l}</dt><dd>${(R.areas[k]||'').trim()?esc(R.areas[k]):linhas(2)}</dd>`).join('')}</dl>
+  <footer>Pauta gerada automaticamente pelo ERP a partir do fechamento do mês anterior. Previsões são estimativas.</footer></body></html>`;
+}
+function _imprimir(html){
+  const f=document.createElement('iframe');f.setAttribute('aria-hidden','true');f.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0';document.body.appendChild(f);
+  const d=f.contentWindow.document;d.open();d.write(html);d.close();
+  setTimeout(()=>{try{f.contentWindow.focus();f.contentWindow.print()}catch(e){toast('A impressão não está disponível aqui.',true)}setTimeout(()=>f.remove(),60000)},400);
+  toast('Na janela de impressão, escolha “Salvar como PDF”.');
+}
+function _peMes(x){const cf=(x.salarios||0)+(x.fixos||0)+(x.mkt||0)+(x.juros||0)+(x.resc||0),mcp=x.receita?((x.rliq||0)-(x.cpv||0)-(x.perdas||0))/x.receita:0,pe=mcp>0?cf/mcp:Infinity,cv=(x.imposto||0)+(x.cpv||0)+(x.perdas||0);return {cf,cv,mcp,pe,ms:isFinite(pe)&&x.receita?(x.receita-pe)/x.receita:null}}
 function relatorioHTML(){
   const E=S.empresa,M=S.marca||{},H=S.hist||[],last=H[H.length-1];
   const done=MISSOES.filter(m=>{try{return m.ok()}catch(e){return false}});
@@ -1171,8 +1405,8 @@ function relatorioHTML(){
   const dre=H.length?`<table><thead><tr><th>Mês</th><th>Receita</th><th>CPV</th><th>Perdas</th><th>Salários</th><th>Fixos</th><th>Marketing</th><th>Juros</th><th>Lucro líquido</th><th>Caixa</th><th>Reput.</th><th>% AF</th></tr></thead><tbody>
     ${H.map(x=>`<tr><td>M${x.r} · ${esc(x.mes.slice(0,3))}</td><td>${num(x.receita,2)}</td><td>${num(x.cpv,2)}</td><td>${num(x.perdas,2)}</td><td>${num(x.salarios,2)}</td><td>${num(x.fixos,2)}</td><td>${num(x.mkt,2)}</td><td>${num(x.juros,2)}</td><td class="${x.lucro>=0?'pos':'neg'}">${num(x.lucro,2)}</td><td>${num(x.caixa,2)}</td><td>${num(x.rep)}</td><td>${x.afPct!=null?pct(x.afPct):'—'}</td></tr>`).join('')}
     <tr class="tot"><td>Total</td><td>${num(tot.rec,2)}</td><td colspan="6"></td><td class="${tot.luc>=0?'pos':'neg'}">${num(tot.luc,2)}</td><td colspan="3"></td></tr></tbody></table>`:'<p class="vazio">Nenhum mês fechado ainda.</p>';
-  const peT=H.length?`<table><thead><tr><th>Mês</th><th>Receita</th><th>Custos fixos</th><th>Margem de contribuição</th><th>Ponto de equilíbrio</th><th>Margem de segurança</th><th>Situação</th></tr></thead><tbody>
-    ${H.map(x=>{const e=_peMes(x),ok=isFinite(e.pe)&&x.receita>=e.pe;return `<tr><td>M${x.r} · ${esc(x.mes.slice(0,3))}</td><td>${num(x.receita,2)}</td><td>${num(e.cf,2)}</td><td>${pct(e.mcp)}</td><td>${isFinite(e.pe)?num(e.pe,2):'—'}</td><td class="${ok?'pos':'neg'}">${e.ms!=null?pct(e.ms):'—'}</td><td class="${ok?'pos':'neg'}">${ok?'Acima':'Abaixo'}</td></tr>`}).join('')}</tbody></table><p class="nota">Ponto de equilíbrio = custos fixos ÷ margem de contribuição %. É o faturamento mínimo do mês para não ter prejuízo. Margem de segurança = quanto as vendas poderiam cair, em %, antes de dar prejuízo.</p>`:'<p class="vazio">Nenhum mês fechado ainda.</p>';
+  const peT=H.length?`<table><thead><tr><th>Mês</th><th>Receita</th><th>Custos fixos</th><th>Custo variável total</th><th>CV % da receita</th><th>Margem de contribuição</th><th>Ponto de equilíbrio</th><th>Margem de segurança</th><th>Situação</th></tr></thead><tbody>
+    ${H.map(x=>{const e=_peMes(x),ok=isFinite(e.pe)&&x.receita>=e.pe;return `<tr><td>M${x.r} · ${esc(x.mes.slice(0,3))}</td><td>${num(x.receita,2)}</td><td>${num(e.cf,2)}</td><td>${num(e.cv,2)}</td><td>${pct(x.receita?e.cv/x.receita:0)}</td><td>${pct(e.mcp)}</td><td>${isFinite(e.pe)?num(e.pe,2):'—'}</td><td class="${ok?'pos':'neg'}">${e.ms!=null?pct(e.ms):'—'}</td><td class="${ok?'pos':'neg'}">${ok?'Acima':'Abaixo'}</td></tr>`}).join('')}</tbody></table><p class="nota">Ponto de equilíbrio = custos fixos ÷ margem de contribuição %. Custo variável = impostos + custo dos insumos + perdas; o ponto de equilíbrio em unidades de cada produto está no rateio. É o faturamento mínimo do mês para não ter prejuízo. Margem de segurança = quanto as vendas poderiam cair, em %, antes de dar prejuízo.</p>`:'<p class="vazio">Nenhum mês fechado ainda.</p>';
   const peU=H.length?_peMes(H[H.length-1]):null;
   const MK=S.mktHist||[];
   const mk=MK.length?`<table><thead><tr><th>Mês</th><th>% da receita</th><th>Investido</th><th>Vendas extras</th><th>Margem extra</th><th>ROI</th></tr></thead><tbody>
@@ -1204,9 +1438,11 @@ function relatorioHTML(){
   <h2>4. Produtos e preços</h2>${prods}
   <h2>5. Resultados mês a mês (DRE resumida, em R$)</h2>${dre}
   <h2>6. Ponto de equilíbrio mês a mês (em R$)</h2>${peT}
-  <h2>7. Marketing</h2>${mk}
-  <h2>8. Missões</h2><ul class="m">${MISSOES.map(m=>{let ok=false;try{ok=m.ok()}catch(e){}return `<li>${ok?'✔':'○'} ${esc(m.t)}</li>`}).join('')}</ul>
-  <h2>9. Comentários do professor</h2><div class="obs"></div>
+  <h2>7. Rateio dos custos por produto (último mês)</h2>${H.length?rateioHTML(H[H.length-1].r,true).replace(/<h3>/g,'<h3 style="font-size:10.5pt;margin:10px 0 4px">').replace(/class="n"/g,''):'<p class="vazio">Nenhum mês fechado ainda.</p>'}
+  <h2>8. Marketing</h2>${mk}
+  <h2>9. Reuniões de planejamento</h2>${(()=>{const RR=Object.entries(S.reunioes||{}).filter(([k])=>_reunTem(+k)).sort((a,b)=>a[0]-b[0]);return RR.length?RR.map(([k,x])=>`<h3 style="font-size:10.5pt;margin:10px 0 4px">Mês ${k} · ${esc(mesNome(+k))}</h3><dl>${x.presentes?`<dt>Presentes</dt><dd>${esc(x.presentes)}</dd>`:''}${x.meta?`<dt>Meta do mês</dt><dd>${esc(x.meta)}</dd>`:''}${AREAS_REUN.filter(([a])=>(x.areas[a]||'').trim()).map(([a,l])=>`<dt>${l}</dt><dd>${esc(x.areas[a])}</dd>`).join('')}</dl>`).join(''):'<p class="vazio">Nenhuma reunião registrada no ERP.</p>'})()}
+  <h2>10. Missões</h2><ul class="m">${MISSOES.map(m=>{let ok=false;try{ok=m.ok()}catch(e){}return `<li>${ok?'✔':'○'} ${esc(m.t)}</li>`}).join('')}</ul>
+  <h2>11. Comentários do professor</h2><div class="obs"></div>
   <footer>Relatório gerado pelo ERP Doce Cerrado, edição Marketing. Valores em reais; % AF = parte das compras de insumos feita da agricultura familiar.</footer>
   </body></html>`;
 }
@@ -1225,8 +1461,8 @@ function relatorioCsv(){
   L.push(q('RESULTADOS MÊS A MÊS'));
   L.push(['Mês','Receita','Impostos','CPV','Perdas','Lucro bruto','Salários','Fixos','Marketing','Rescisões','Juros','Lucro líquido','Caixa','Reputação','% agricultura familiar'].map(q).join(';'));
   (S.hist||[]).forEach(x=>L.push([q(`M${x.r} ${x.mes}`),n(x.receita),n(x.imposto),n(x.cpv),n(x.perdas),n(x.lbruto),n(x.salarios),n(x.fixos),n(x.mkt),n(x.resc),n(x.juros),n(x.lucro),n(x.caixa),n(x.rep),x.afPct!=null?n(x.afPct*100):''].join(';')));
-  L.push('',q('PONTO DE EQUILÍBRIO MÊS A MÊS'),['Mês','Receita','Custos fixos','Margem de contribuição %','Ponto de equilíbrio','Margem de segurança %','Situação'].map(q).join(';'));
-  (S.hist||[]).forEach(x=>{const e=_peMes(x),ok=isFinite(e.pe)&&x.receita>=e.pe;L.push([q(`M${x.r} ${x.mes}`),n(x.receita),n(e.cf),n(e.mcp*100),isFinite(e.pe)?n(e.pe):'',e.ms!=null?n(e.ms*100):'',q(ok?'Acima':'Abaixo')].join(';'))});
+  L.push('',q('PONTO DE EQUILÍBRIO MÊS A MÊS'),['Mês','Receita','Custos fixos','Custo variável total','Margem de contribuição %','Ponto de equilíbrio','Margem de segurança %','Situação'].map(q).join(';'));
+  (S.hist||[]).forEach(x=>{const e=_peMes(x),ok=isFinite(e.pe)&&x.receita>=e.pe;L.push([q(`M${x.r} ${x.mes}`),n(x.receita),n(e.cf),n(e.cv),n(e.mcp*100),isFinite(e.pe)?n(e.pe):'',e.ms!=null?n(e.ms*100):'',q(ok?'Acima':'Abaixo')].join(';'))});
   L.push('',q('PRODUTOS'),['Produto','Preço','Concorrente','Custo unitário','Estoque'].map(q).join(';'));
   S.produtos.forEach(p=>L.push([q(p.nome),n(p.preco),n(p.conc),n(p.cm),n(p.estoque)].join(';')));
   L.push('',q('MARKETING'),['Mês','% da receita','Investido','Vendas extras','Margem extra','ROI %'].map(q).join(';'));
@@ -1234,6 +1470,11 @@ function relatorioCsv(){
   L.push('',q('PLANO DE MARKETING'),[q('Segmentação'),q(S.mktPlano.segmentacao)].join(';'),['Produto','Fase do ciclo de vida','Estratégia'].map(q).join(';'));
   S.produtos.forEach(p=>{const f=FASES_CV.find(x=>x[0]===S.mktPlano.fases[p.id]);L.push([q(p.nome),q(f?f[1]:''),q(S.mktPlano.estrat[p.id]||'')].join(';'))});
   L.push([q('Ações de fidelização'),q(S.mktPlano.fidel)].join(';'),[q('Indicador'),q(S.mktPlano.indicador)].join(';'),[q('Meta'),q(S.mktPlano.meta)].join(';'));
+  {const cu=custeioMes((S.hist||[])[S.hist.length-1]);if(cu){L.push('',q(`RATEIO DOS CUSTOS POR PRODUTO – M${cu.x.r} ${cu.x.mes} (custeio por absorção, centros de custo)`),['Produto','Quantidade','Receita','Custo variável','CVU','Margem de contribuição',...cu.pools.map(p=>`Rateio ${p.k}. ${p.nome}`),'Custos fixos rateados','Lucro do produto','Custo unitário total','Preço médio'].map(q).join(';'));
+    cu.L.forEach(o=>L.push([q(o.nome),n(o.q),n(o.R),n(o.CV),n(o.q?o.CV/o.q:0),n(o.MC),...cu.pools.map(p=>n(o['r'+p.k])),n(o.CF),n(o.lucro),n(o.cut),n(o.pm)].join(';')));
+    L.push(['Centro de custo','Valor','Direcionador'].map(q).join(';'));cu.pools.forEach(p=>L.push([q(`${p.k}. ${p.nome}`),n(p.valor),q(p.dir)].join(';')))}}
+  L.push('',q('REUNIÕES DE PLANEJAMENTO'),['Mês','Presentes','Meta',...AREAS_REUN.map(a=>a[1])].map(q).join(';'));
+  Object.entries(S.reunioes||{}).filter(([k])=>_reunTem(+k)).sort((a,b)=>a[0]-b[0]).forEach(([k,x])=>L.push([q(`M${k} ${mesNome(+k)}`),q(x.presentes),q(x.meta),...AREAS_REUN.map(([a])=>q(x.areas[a]||''))].join(';')));
   L.push('',q('MISSÕES'));
   MISSOES.forEach(m=>{let ok=false;try{ok=m.ok()}catch(e){}L.push([q(m.t),q(ok?'Concluída':'A fazer')].join(';'))});
   baixarTexto(`relatorio-${_slug()}-mes-${S.rodada}.csv`,'﻿'+L.join('\r\n'),'text/csv;charset=utf-8');
@@ -1321,19 +1562,41 @@ async function salvarArquivo(nome,blob,okMsg){
   try{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=nome;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);toast(okMsg)}catch(e){toast('Não foi possível baixar o arquivo neste navegador.',true)}
 }
 
+const FAIXA_PRECO=0.20;
+function refConc(p){const ev=S.evento||{};return r2(p.conc*((ev.conc&&ev.conc[p.id])||1))}
+function faixaPreco(p){const r=refConc(p);return [Math.ceil(r*(1-FAIXA_PRECO)*20)/20,Math.floor(r*(1+FAIXA_PRECO)*20)/20]}
+function riscoPreco(p,novo){
+  const ref=refConc(p),f=x=>clamp(Math.pow(ref/Math.max(x,0.01),1.6),0.05,2.5),fA=f(p.preco),fN=f(novo);
+  const qA=Math.max(0,previsao(p).valor),qN=Math.round(qA*fN/fA),c=custoPadrao(p);
+  const mcA=p.preco*(1-IMPOSTO)-c,mcN=novo*(1-IMPOSTO)-c,rel=novo/ref-1;
+  const nivel=mcN<0?['bad','Prejuízo','O preço não cobre os insumos e os impostos: cada venda dá prejuízo.']:
+    rel>0.12?['bad','Risco alto de perder share',`Preço ${pct(rel)} acima do concorrente: muitos clientes vão migrar para ele.`]:
+    rel>0.05?['warn','Risco moderado','Só se sustenta com diferencial claro (ingredientes do cerrado, qualidade, embalagem) e boa reputação.']:
+    rel>=-0.05?['good','Risco baixo','Preço alinhado ao mercado.']:
+    ['warn','Preço agressivo',`Preço ${pct(-rel)} abaixo do concorrente: ganha clientes, mas reduz a margem por unidade.`];
+  return {ref,qA,qN,dq:qA?qN/qA-1:0,mtA:mcA*qA,mtN:mcN*qN,shA:fA/(fA+1),shN:fN/(fN+1),nivel};
+}
+function riscoHTML(p,novo){
+  const r=riscoPreco(p,novo),[a,b]=faixaPreco(p),mudou=Math.abs(novo-p.preco)>0.001;
+  return `<div class="alert ${r.nivel[0]}" style="margin-top:6px"><b>${r.nivel[1]}</b><span>${r.nivel[2]}
+   <br>Faixa permitida: <b>${brl(a)} a ${brl(b)}</b> (concorrente ${brl(r.ref)} ± ${Math.round(FAIXA_PRECO*100)}%).
+   <br>Participação estimada frente ao concorrente: <b>${pct(r.shN)}</b>${mudou?` (hoje ${pct(r.shA)})`:''}.
+   ${mudou?`<br>Simulação: procura ${r.dq>=0?'+':''}${pct(r.dq)} (~${num(r.qA)} → ${num(r.qN)} ${esc(p.un)}/mês) · margem total ${brl(r.mtA)} → <b>${brl(r.mtN)}</b> ${r.mtN>=r.mtA?'(ganha)':'(perde)'}.`:'<br>Digite outro preço para simular o efeito na procura e na margem.'}</span></div>`;
+}
 function vProdutos(){
   return head('Cadastro','Produtos e preços','O preço precisa cobrir o custo, os impostos e ainda contribuir para os custos fixos. Altere o preço e veja a margem mudar.')+
   `<div class="panel soft"><h2>Como formar o preço</h2>
    <div class="formula">Custo unitário = soma dos insumos da ficha técnica<br>Markup = preço ÷ custo unitário<br>Margem de contribuição = preço − custo unitário − 6% de imposto</div>
-   <p class="tip">Um preço muito acima do concorrente derruba a procura; muito abaixo do custo gera prejuízo a cada venda. A procura reage ao preço relativo ao concorrente.</p></div>
+   <p class="tip">O preço de venda pode variar até ${Math.round(FAIXA_PRECO*100)}% acima ou abaixo do concorrente. Preço acima do concorrente derruba a procura e a participação no mercado (share); muito abaixo do custo gera prejuízo a cada venda. A procura reage ao preço relativo ao concorrente.</p></div>
   <div class="cards">${S.produtos.map(p=>{
     const c=custoPadrao(p),mc=p.preco-c-p.preco*IMPOSTO,mcp=p.preco?mc/p.preco:0,mk=c?p.preco/c:0,rel=p.preco/p.conc-1;
     return `<article class="card"><header><div><h3>${esc(p.nome)}</h3><span class="small muted">por ${esc(p.un)} · ${p.perecivel?'perecível':'não perecível'}</span></div>${mc<0?'<span class="pill bad">Prejuízo</span>':mcp<0.3?'<span class="pill warn">Margem baixa</span>':'<span class="pill good">Margem saudável</span>'}</header>
-     <div class="form"><label>Seu preço (R$)<input type="number" step="0.05" min="0.05" id="pr_${p.id}" data-preco="${p.id}" value="${p.preco}"></label><label>Concorrente<span class="num" style="padding:7px 0;color:var(--ink);font-weight:400">${brl(p.conc)}</span></label></div>
+     <div class="form"><label>Seu preço (R$)<input type="number" step="0.05" min="${faixaPreco(p)[0]}" max="${faixaPreco(p)[1]}" id="pr_${p.id}" data-preco="${p.id}" value="${p.preco}"></label><label>Concorrente<span class="num" style="padding:7px 0;color:var(--ink);font-weight:400">${brl(p.conc)}</span></label></div>
      <div class="row"><span>Custo unitário (preços atuais)</span><b>${brl(c)}</b></div>
      <div class="row"><span>Markup</span><b>${num(mk,2)}×</b></div>
      <div class="row"><span>Margem de contribuição</span><b>${brl(mc)} · ${pct(mcp)}</b></div>
      <div class="row"><span>Preço vs. concorrente</span><b>${rel>=0?'+':''}${pct(rel)}</b></div>
+     <div id="risk_${p.id}">${riscoHTML(p,p.preco)}</div>
      <div class="row"><span>Em estoque</span><b>${num(p.estoque)} ${esc(p.un)}</b></div>
      <div class="row"><span>Ingredientes da agricultura familiar</span><b>${afProduto(p)>0?`<span class="pill good">${pct(afProduto(p))} do custo</span>`:'<span class="pill mute">0%</span>'}</b></div>
      <details><summary class="small" style="cursor:pointer;font-weight:700">Ficha técnica (1 ${esc(p.un)})</summary>
@@ -1453,6 +1716,8 @@ function vFinanceiro(){
     <h3 class="small">A pagar</h3>${S.pagar.length?`<div class="tbl"><table><tbody>${S.pagar.map(x=>`<tr><td class="small">${esc(x.desc)}</td><td>${x.vence<=S.rodada?'<span class="pill warn">vence neste mês</span>':`M${x.vence}`}</td><td class="n">${brl(x.valor)}</td></tr>`).join('')}</tbody></table></div>`:'<p class="empty">Nenhuma.</p>'}
     <h3 class="small">A receber</h3>${S.receber.length?`<div class="tbl"><table><tbody>${S.receber.map(x=>`<tr><td class="small">${esc(x.desc)}</td><td>${x.vence<=S.rodada?'<span class="pill good">entra neste mês</span>':`M${x.vence}`}</td><td class="n">${brl(x.valor)}</td></tr>`).join('')}</tbody></table></div>`:'<p class="empty">Nenhuma.</p>'}
    </div></div>
+  ${painelCustoFixo()}
+  ${painelCustoVariavel()}
   <div class="panel"><h2>Livro-caixa</h2><p>Todas as entradas e saídas de dinheiro, das mais recentes para as mais antigas.</p>
    <div class="tbl"><table><thead><tr><th>Mês</th><th>Categoria</th><th>Descrição</th><th class="n">Entrada</th><th class="n">Saída</th></tr></thead><tbody>
    ${S.lanc.slice(-60).reverse().map(l=>`<tr><td>M${l.r}</td><td><span class="pill ${l.tipo==='e'?'good':'mute'}">${esc(l.cat)}</span></td><td class="small">${esc(l.desc)}</td><td class="n">${l.tipo==='e'?brl(l.valor):''}</td><td class="n">${l.tipo==='s'?brl(l.valor):''}</td></tr>`).join('')}</tbody></table></div></div>`;
@@ -1642,7 +1907,7 @@ function vRelatorios(){
   let saldo=0;const flRows=Object.keys(fl).map(Number).sort((a,b)=>a-b).map(r=>{saldo+=fl[r].e-fl[r].s;return `<tr><td>M${r} · ${mesNome(r)}</td><td class="n">${brl(fl[r].e)}</td><td class="n">${brl(fl[r].s)}</td><td class="n">${brl(fl[r].e-fl[r].s)}</td><td class="n">${brl(saldo)}</td></tr>`}).slice(-8).join('');
   return head('Controladoria','Relatórios','A DRE mostra se a empresa ganhou ou perdeu dinheiro. O balanço mostra o que ela tem e o que deve. O fluxo de caixa mostra por onde o dinheiro passou.')+
   `<div class="form" style="margin-bottom:14px"><button class="btn pri" data-act="relatorioPdf" type="button">Baixar relatório em PDF</button><button class="btn" data-act="relatorioCsv" type="button">Baixar planilha (.csv)</button></div>`+
-  (last?ind:'')+
+  (last?ind:'')+painelCustoFixo()+painelCustoVariavel()+(last?`<div class="panel"><div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center"><h2>Rateio dos custos por produto</h2><label class="small">Mês <select id="rateio_mes">${S.hist.slice().reverse().map(h=>`<option value="${h.r}" ${h.r===(S.rateioSel||last.r)?'selected':''}>M${h.r} · ${esc(h.mes)}</option>`).join('')}</select></label></div>${rateioHTML(S.rateioSel||last.r)}</div>`:'')+
   `<div class="panel"><h2>DRE: Demonstração do Resultado</h2>${h.length?`<div class="tbl"><table><thead><tr><th>Conta</th>${h.map(x=>`<th class="n">M${x.r} · ${x.mes.slice(0,3)}</th>`).join('')}</tr></thead><tbody>
    ${rows.map(([t,k,neg,cls])=>`<tr class="${cls||''}"><td>${t}</td>${h.map(x=>`<td class="n" ${k==='lucro'?`style="color:var(${x.lucro>=0?'--good':'--bad'})"`:''}>${neg&&x[k]?brl(-x[k]):brl(x[k])}</td>`).join('')}</tr>`).join('')}
    </tbody></table></div><p class="small muted">Mostrando os últimos ${h.length} meses. Receita inclui varejo, pedidos e vendas diretas, mesmo as recebidas a prazo.</p>`:'<p class="empty">A DRE é gerada quando você fecha o primeiro mês.</p>'}</div>
@@ -1688,7 +1953,7 @@ function vTurma(){
   ${lista.map((e,i)=>`<tr><td class="n">${i+1}</td><td><b>${esc(e.nome)}</b></td><td>${esc(e.turma)}</td><td class="small">${esc(e.socios)}</td><td class="n">${num(e.rodada||1)}</td><td class="n">${brl(e.caixa||0)}</td><td class="n" style="color:var(${(e.lucroAcum||0)>=0?'--good':'--bad'})">${brl(e.lucroAcum||0)}</td><td class="n">${brl(e.patrimonio||0)}</td><td class="n">${num(e.reputacao||0)}</td><td class="n">${num(e.missoes||0)}/${MISSOES.length}</td><td class="small">${e.salvoEm?new Date(e.salvoEm).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'—'}</td></tr>`).join('')}
   </tbody></table></div><p class="small muted">Ordenado pelo patrimônio líquido. O mês indica quantas rodadas a equipe já jogou.</p>`}</div>`;
 }
-const VIEWS={turma:vTurma,pcp:vPCP,marca:vMarca,painel:vPainel,plano:vPlano,produtos:vProdutos,compras:vCompras,producao:vProducao,vendas:vVendas,financeiro:vFinanceiro,pessoas:vPessoas,mercado:vMercado,relatorios:vRelatorios,missoes:vMissoes};
+const VIEWS={reuniao:vReuniao,turma:vTurma,pcp:vPCP,marca:vMarca,painel:vPainel,plano:vPlano,produtos:vProdutos,compras:vCompras,producao:vProducao,vendas:vVendas,financeiro:vFinanceiro,pessoas:vPessoas,mercado:vMercado,relatorios:vRelatorios,missoes:vMissoes};
 
 function render(){
   $('#brandName').textContent=S.empresa.nome||'Minha empresa';
@@ -1706,7 +1971,8 @@ function go(v){if(!VIEWS[v])v='painel';view=v;$('#modal').hidden=true;try{histor
 document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(b&&A[b.dataset.act]){e.preventDefault();A[b.dataset.act](b)}});
 document.addEventListener('change',e=>{
   const t=e.target;
-  if(t.dataset.preco){const v=parseFloat(t.value);const p=prod(t.dataset.preco);if(v>0&&v!==p.preco){p.preco=r2(v);S.stats.preco++;S.mes.revisou=true;save();render();toast(`Novo preço de ${p.nome}: ${brl(p.preco)}.`)}}
+  if(t.id==='rateio_mes'){S.rateioSel=+t.value;render()}
+  if(t.dataset.preco){let v=parseFloat(t.value);const p=prod(t.dataset.preco);if(v>0){const [a,b]=faixaPreco(p);const lim=v<a||v>b;v=clamp(v,a,b);if(v!==p.preco||lim){p.preco=r2(v);S.stats.preco++;S.mes.revisou=true;save();render();toast(lim?`Preço fora da faixa de mercado. ${p.nome} ficou em ${brl(p.preco)} (permitido: ${brl(a)} a ${brl(b)}, até ${Math.round(FAIXA_PRECO*100)}% acima ou abaixo do concorrente).`:`Novo preço de ${p.nome}: ${brl(p.preco)}.`,lim)}}}
   if(t.dataset.pcpk){const p=prod(t.dataset.pid),c=cfg(p),k=t.dataset.pcpk;
     if(k==='metodo'){c.metodo=t.value;S.stats.metodo++}
     else if(k==='alfa')c.alfa=clamp(parseFloat(String(t.value).replace(',','.'))||0.3,0.1,0.9);
@@ -1728,6 +1994,9 @@ document.addEventListener('change',e=>{
 let tSave;
 document.addEventListener('input',e=>{
   const t=e.target;
+  if(t.dataset.preco){const p=prod(t.dataset.preco),v=parseFloat(t.value),box=document.getElementById('risk_'+p.id);if(box&&v>0)box.innerHTML=riscoHTML(p,v)}
+  if(t.dataset.reun){_reun(S.rodada)[t.dataset.reun]=t.value;clearTimeout(tSave);tSave=setTimeout(save,300)}
+  if(t.dataset.reuna){_reun(S.rodada).areas[t.dataset.reuna]=t.value;clearTimeout(tSave);tSave=setTimeout(save,300)}
   if(t.id==='mkt_pct'){const o=document.getElementById('mkt_pct_out');if(o)o.textContent=num(+t.value,1)+'%'}
   if(t.id&&/^np(f)?_/.test(t.id)){const box=document.getElementById('np_mrp');if(box)box.innerHTML=mrpNovo()}
   if(t.dataset.marca!==undefined||(t.dataset.marcap&&t.dataset.marcap!=='cor')){
