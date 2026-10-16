@@ -1473,7 +1473,7 @@ function _imprimir(html){
   setTimeout(()=>{try{f.contentWindow.focus();f.contentWindow.print()}catch(e){toast('A impressão não está disponível aqui.',true)}setTimeout(()=>f.remove(),60000)},400);
   toast('Na janela de impressão, escolha “Salvar como PDF”.');
 }
-function _peMes(x){const cf=(x.salarios||0)+(x.fixos||0)+(x.mkt||0)+(x.juros||0)+(x.resc||0)+(x.dep||0),mcp=x.receita?((x.rliq||0)-(x.cpv||0)-(x.perdas||0)-(x.comissao||0)-(x.entregas||0))/x.receita:0,pe=mcp>0?cf/mcp:Infinity,tk=x.pizzas?x.receita/x.pizzas:0;return {cf,mcp,pe,pz:isFinite(pe)&&tk?Math.ceil(pe/tk):null,ms:isFinite(pe)&&x.receita?(x.receita-pe)/x.receita:null}}
+function _peMes(x){const cf=(x.salarios||0)+(x.fixos||0)+(x.mkt||0)+(x.juros||0)+(x.resc||0)+(x.dep||0),mcp=x.receita?((x.rliq||0)-(x.cpv||0)-(x.perdas||0)-(x.comissao||0)-(x.entregas||0))/x.receita:0,pe=mcp>0?cf/mcp:Infinity,tk=x.pizzas?x.receita/x.pizzas:0,cv=(x.imposto||0)+(x.cpv||0)+(x.perdas||0)+(x.comissao||0)+(x.entregas||0);return {cf,cv,mcp,pe,pz:isFinite(pe)&&tk?Math.ceil(pe/tk):null,ms:isFinite(pe)&&x.receita?(x.receita-pe)/x.receita:null}}
 function relatorioHTML(){
   const E=S.empresa,M=S.marca||{},H=S.hist||[];
   const ms=_missoesOk(),done=ms.filter(x=>x[1]).length;
@@ -1487,8 +1487,8 @@ function relatorioHTML(){
   const dre=H.length?`<table><thead><tr><th>Mês</th><th>Receita</th><th>CMV</th><th>Perdas</th><th>Comissão app</th><th>Entregas</th><th>Salários</th><th>Fixos e depreciação</th><th>Marketing</th><th>Juros</th><th>Lucro líquido</th></tr></thead><tbody>
     ${H.map(x=>`<tr><td>M${x.r} · ${esc(x.mes.slice(0,3))}</td><td>${n2(x.receita)}</td><td>${n2(x.cpv)}</td><td>${n2(x.perdas)}</td><td>${n2(x.comissao)}</td><td>${n2(x.entregas)}</td><td>${n2(x.salarios)}</td><td>${n2((x.fixos||0)+(x.dep||0))}</td><td>${n2(x.mkt)}</td><td>${n2(x.juros)}</td><td class="${x.lucro>=0?'pos':'neg'}">${n2(x.lucro)}</td></tr>`).join('')}
     <tr class="tot"><td>Total</td><td>${n2(tot.rec)}</td><td colspan="8"></td><td class="${tot.luc>=0?'pos':'neg'}">${n2(tot.luc)}</td></tr></tbody></table>`:'<p class="vazio">Nenhum mês fechado ainda.</p>';
-  const peT=H.length?`<table><thead><tr><th>Mês</th><th>Receita</th><th>Custos fixos</th><th>Margem de contribuição</th><th>Ponto de equilíbrio</th><th>Pizzas para empatar</th><th>Pizzas vendidas</th><th>Margem de segurança</th><th>Situação</th></tr></thead><tbody>
-    ${H.map(x=>{const e=_peMes(x),ok=isFinite(e.pe)&&x.receita>=e.pe;return `<tr><td>M${x.r} · ${esc(x.mes.slice(0,3))}</td><td>${n2(x.receita)}</td><td>${n2(e.cf)}</td><td>${pct(e.mcp)}</td><td>${isFinite(e.pe)?n2(e.pe):'—'}</td><td>${e.pz!=null?num(e.pz):'—'}</td><td>${num(x.pizzas||0)}</td><td class="${ok?'pos':'neg'}">${e.ms!=null?pct(e.ms):'—'}</td><td class="${ok?'pos':'neg'}">${ok?'Acima':'Abaixo'}</td></tr>`}).join('')}</tbody></table><p class="nota">Ponto de equilíbrio = custos fixos ÷ margem de contribuição %. É o faturamento mínimo do mês para não ter prejuízo. Margem de segurança = quanto as vendas poderiam cair, em %, antes de dar prejuízo.</p>`:'<p class="vazio">Nenhum mês fechado ainda.</p>';
+  const peT=H.length?`<table><thead><tr><th>Mês</th><th>Receita</th><th>Custos fixos</th><th>Custo variável total</th><th>CVU</th><th>Margem de contribuição</th><th>Ponto de equilíbrio</th><th>Pizzas para empatar</th><th>Pizzas vendidas</th><th>Margem de segurança</th><th>Situação</th></tr></thead><tbody>
+    ${H.map(x=>{const e=_peMes(x),ok=isFinite(e.pe)&&x.receita>=e.pe;return `<tr><td>M${x.r} · ${esc(x.mes.slice(0,3))}</td><td>${n2(x.receita)}</td><td>${n2(e.cf)}</td><td>${n2(e.cv)}</td><td>${x.pizzas?n2(e.cv/x.pizzas):'—'}</td><td>${pct(e.mcp)}</td><td>${isFinite(e.pe)?n2(e.pe):'—'}</td><td>${e.pz!=null?num(e.pz):'—'}</td><td>${num(x.pizzas||0)}</td><td class="${ok?'pos':'neg'}">${e.ms!=null?pct(e.ms):'—'}</td><td class="${ok?'pos':'neg'}">${ok?'Acima':'Abaixo'}</td></tr>`}).join('')}</tbody></table><p class="nota">Ponto de equilíbrio = custos fixos ÷ margem de contribuição % = custos fixos ÷ (PV − CVU) em pizzas. Custo variável = impostos + CMV + perdas + comissão do app + entregadores; CVU = custo variável ÷ pizzas. É o faturamento mínimo do mês para não ter prejuízo. Margem de segurança = quanto as vendas poderiam cair, em %, antes de dar prejuízo.</p>`:'<p class="vazio">Nenhum mês fechado ainda.</p>';
   const peU=H.length?_peMes(H[H.length-1]):null;
   const ops=H.length?`<table><thead><tr><th>Mês</th><th>Notícia do mês</th><th>Pizzas</th><th>Pedidos</th><th>Entregas</th><th>Forno usado</th><th>Horas de cozinha</th><th>Caixa</th><th>Reput.</th><th>% AF</th></tr></thead><tbody>
     ${H.map(x=>`<tr><td>M${x.r} · ${esc(x.mes.slice(0,3))}</td><td style="text-align:left;white-space:normal">${esc(x.evento||'')}</td><td>${num(x.pizzas||0)}</td><td>${num(x.pedidos||0)}</td><td>${num(x.nEntregas||0)}</td><td>${num(x.forno||0)}/${num(x.capForno||0)}</td><td>${num(x.horas||0)}/${num(x.horasTot||0)}</td><td>${n2(x.caixa)}</td><td>${num(x.rep)}</td><td>${x.afPct!=null?pct(x.afPct):'—'}</td></tr>`).join('')}</tbody></table>`:'';
@@ -1553,8 +1553,8 @@ function relatorioCsv(){
   L.push(q('RESULTADOS MÊS A MÊS'));
   L.push(['Mês','Receita','Taxas de entrega','Impostos','CMV','Perdas','Lucro bruto','Comissão app','Entregas','Salários','Fixos','Depreciação','Marketing','Rescisões','Juros','Lucro líquido','Caixa','Reputação','Pizzas','Pedidos','% agricultura familiar'].map(q).join(';'));
   (S.hist||[]).forEach(x=>L.push([q(`M${x.r} ${x.mes}`),n(x.receita),n(x.taxas),n(x.imposto),n(x.cpv),n(x.perdas),n(x.lbruto),n(x.comissao),n(x.entregas),n(x.salarios),n(x.fixos),n(x.dep),n(x.mkt),n(x.resc),n(x.juros),n(x.lucro),n(x.caixa),n(x.rep),n(x.pizzas),n(x.pedidos),x.afPct!=null?n(x.afPct*100):''].join(';')));
-  L.push('',q('PONTO DE EQUILÍBRIO MÊS A MÊS'),['Mês','Receita','Custos fixos','Margem de contribuição %','Ponto de equilíbrio','Pizzas para empatar','Pizzas vendidas','Margem de segurança %','Situação'].map(q).join(';'));
-  (S.hist||[]).forEach(x=>{const e=_peMes(x),ok=isFinite(e.pe)&&x.receita>=e.pe;L.push([q(`M${x.r} ${x.mes}`),n(x.receita),n(e.cf),n(e.mcp*100),isFinite(e.pe)?n(e.pe):'',e.pz!=null?n(e.pz):'',n(x.pizzas),e.ms!=null?n(e.ms*100):'',q(ok?'Acima':'Abaixo')].join(';'))});
+  L.push('',q('PONTO DE EQUILÍBRIO MÊS A MÊS'),['Mês','Receita','Custos fixos','Custo variável total','CVU','Margem de contribuição %','Ponto de equilíbrio','Pizzas para empatar','Pizzas vendidas','Margem de segurança %','Situação'].map(q).join(';'));
+  (S.hist||[]).forEach(x=>{const e=_peMes(x),ok=isFinite(e.pe)&&x.receita>=e.pe;L.push([q(`M${x.r} ${x.mes}`),n(x.receita),n(e.cf),n(e.cv),x.pizzas?n(e.cv/x.pizzas):'',n(e.mcp*100),isFinite(e.pe)?n(e.pe):'',e.pz!=null?n(e.pz):'',n(x.pizzas),e.ms!=null?n(e.ms*100):'',q(ok?'Acima':'Abaixo')].join(';'))});
   L.push('',q('CARDÁPIO'),['Produto','Preço','Concorrente','Custo unitário','Estratégia','Estoque'].map(q).join(';'));
   S.produtos.forEach(p=>L.push([q(p.nome),n(p.preco),n(p.conc),n(p.cm),q(p.tipo==='bebida'?'Revenda':cfg(p).politica),n(p.estoque)].join(';')));
   L.push('',q('MARKETING'),['Mês','% da receita','Investido','Vendas extras','Margem extra','ROI %'].map(q).join(';'));
@@ -1819,6 +1819,30 @@ function vCanais(){
    </tbody></table></div>`:'<p class="empty">O resultado por canal aparece depois do primeiro fechamento.</p>'}</div>`;
 }
 
+function painelCustoVariavel(){
+  const last=S.hist[S.hist.length-1];
+  if(!last)return `<div class="panel"><h2>Custos variáveis</h2><p class="small muted">Os custos variáveis aparecem depois do primeiro fechamento: impostos, CMV, perdas, comissão do aplicativo e entregadores pagos por entrega.</p></div>`;
+  const pz=last.pizzas||0,itens=[['Impostos (Simples 6%)','sobre a receita',last.imposto],['CMV: ingredientes e caixas','das pizzas e bebidas vendidas',last.cpv],['Perdas por validade e sobras','massa, molho e pré-assadas',last.perdas],['Comissão do aplicativo','25% das vendas no app',last.comissao||0],['Entregadores pagos por entrega',`R$ ${num(CUSTO_ENTREGA)} por entrega terceirizada`,last.entregas||0]];
+  const cv=r2(itens.reduce((a,x)=>a+(x[2]||0),0)),pv=pz?last.receita/pz:0,cvu=pz?cv/pz:0;
+  return `<div class="panel"><h2>Custos variáveis de ${esc(last.mes)}</h2><p>Custos que crescem junto com as vendas: quanto mais pizzas, maior o valor. Calculados no fechamento do último mês.</p>
+   <div class="tbl"><table><thead><tr><th>Custo variável</th><th>Base</th><th class="n">Total no mês</th><th class="n">Por pizza</th></tr></thead><tbody>
+   ${itens.map(([d,b,v])=>`<tr><td>${esc(d)}</td><td class="small muted">${esc(b)}</td><td class="n">${brl(v||0)}</td><td class="n">${pz?brl((v||0)/pz):'—'}</td></tr>`).join('')}
+   <tr><td colspan="2"><b>Custo variável total (CVT)</b></td><td class="n"><b>${brl(cv)}</b></td><td class="n"><b>CVU ${pz?brl(cvu):'—'}</b></td></tr></tbody></table></div>
+   <div class="formula">CVU = custo variável total ÷ pizzas vendidas = ${brl(cv)} ÷ ${num(pz)} = <b>${brl(cvu)}</b><br>PV = receita ÷ pizzas = ${brl(last.receita)} ÷ ${num(pz)} = <b>${brl(pv)}</b> · Margem de contribuição unitária = PV − CVU = <b>${brl(pv-cvu)}</b></div></div>`;
+}
+function painelCustoFixo(){
+  const last=S.hist[S.hist.length-1];
+  const itens=[...FIXOS.map(f=>[f.desc,f.cat,f.valor]),['Salários e encargos (30%) dos funcionários','Pessoas',r2(folha())],['Marketing do mês (orçamento)','Marketing',orcMkt()],['Depreciação do forno','Estrutura',depMes()],['Juros dos empréstimos','Banco',r2(S.divida*JUROS)]];
+  const cf=r2(itens.reduce((a,x)=>a+x[2],0));
+  let pe='';
+  if(last&&last.pizzas){const pv=last.receita/last.pizzas,cv=(last.imposto+last.cpv+last.perdas+(last.comissao||0)+(last.entregas||0))/last.pizzas,mcu=pv-cv;
+    pe=`<div class="formula">Ponto de equilíbrio deste mês = custo fixo ÷ (PV − CVU) = ${brl(cf)} ÷ (${brl(pv)} − ${brl(cv)}) = ${brl(cf)} ÷ ${brl(mcu)} = <b>${mcu>0?num(Math.ceil(cf/mcu))+' pizzas':'sem margem positiva'}</b>${mcu>0?` (≈ ${brl(Math.ceil(cf/mcu)*pv)})`:''}<br><span class="small">PV e CVU de ${esc(last.mes)}: PV = receita ${brl(last.receita)} ÷ ${num(last.pizzas)} pizzas · CVU = (impostos + CMV + perdas + comissão do app + entregadores) ÷ ${num(last.pizzas)} pizzas</span></div>`}
+  else pe='<p class="small muted">Depois do primeiro fechamento, o ERP calcula aqui o ponto de equilíbrio em pizzas: custo fixo ÷ (PV − CVU).</p>';
+  return `<div class="panel"><h2>Custos fixos do mês</h2><p>Custos que a pizzaria paga mesmo sem vender nenhuma pizza. Os quatro primeiros não mudam; os demais dependem das decisões da equipe (contratar, investir em marketing, comprar forno, pegar empréstimo).</p>
+   <div class="tbl"><table><thead><tr><th>Custo fixo</th><th>Categoria</th><th class="n">Valor no mês</th></tr></thead><tbody>
+   ${itens.map(([d,c,v])=>`<tr><td>${esc(d)}</td><td><span class="pill mute">${esc(c)}</span></td><td class="n">${brl(v)}</td></tr>`).join('')}
+   <tr><td colspan="2"><b>Custo fixo total</b></td><td class="n"><b>${brl(cf)}</b></td></tr></tbody></table></div>${pe}</div>`;
+}
 function vFinanceiro(){
   const venc=S.pagar.filter(x=>x.vence<=S.rodada);
   return head('Finanças','Financeiro','Caixa é o dinheiro disponível agora. Lucro é o resultado do mês. Os dois andam juntos, mas não são a mesma coisa.')+
@@ -1832,6 +1856,8 @@ function vFinanceiro(){
     <h3 class="small">A pagar</h3>${S.pagar.length?`<div class="tbl"><table><tbody>${S.pagar.map(x=>`<tr><td class="small">${esc(x.desc)}</td><td>${x.vence<=S.rodada?'<span class="pill warn">vence neste mês</span>':`M${x.vence}`}</td><td class="n">${brl(x.valor)}</td></tr>`).join('')}</tbody></table></div>`:'<p class="empty">Nenhuma.</p>'}
     <h3 class="small">A receber</h3>${S.receber.length?`<div class="tbl"><table><tbody>${S.receber.map(x=>`<tr><td class="small">${esc(x.desc)}</td><td>${x.vence<=S.rodada?'<span class="pill good">entra neste mês</span>':`M${x.vence}`}</td><td class="n">${brl(x.valor)}</td></tr>`).join('')}</tbody></table></div>`:'<p class="empty">Nenhuma.</p>'}
    </div></div>
+  ${painelCustoFixo()}
+  ${painelCustoVariavel()}
   <div class="panel"><h2>Livro-caixa</h2><p>Todas as entradas e saídas de dinheiro, das mais recentes para as mais antigas.</p>
    <div class="tbl"><table><thead><tr><th>Mês</th><th>Categoria</th><th>Descrição</th><th class="n">Entrada</th><th class="n">Saída</th></tr></thead><tbody>
    ${S.lanc.slice(-60).reverse().map(l=>`<tr><td>M${l.r}</td><td><span class="pill ${l.tipo==='e'?'good':'mute'}">${esc(l.cat)}</span></td><td class="small">${esc(l.desc)}</td><td class="n">${l.tipo==='e'?brl(l.valor):''}</td><td class="n">${l.tipo==='s'?brl(l.valor):''}</td></tr>`).join('')}</tbody></table></div></div>`;
@@ -2041,7 +2067,7 @@ function vRelatorios(){
   let saldo=0;const flRows=Object.keys(fl).map(Number).sort((a,b)=>a-b).map(r=>{saldo+=fl[r].e-fl[r].s;return `<tr><td>M${r} · ${mesNome(r)}</td><td class="n">${brl(fl[r].e)}</td><td class="n">${brl(fl[r].s)}</td><td class="n">${brl(fl[r].e-fl[r].s)}</td><td class="n">${brl(saldo)}</td></tr>`}).slice(-8).join('');
   return head('Controladoria','Relatórios','A DRE mostra se a pizzaria ganhou ou perdeu dinheiro. O balanço mostra o que ela tem e o que deve. O fluxo de caixa mostra por onde o dinheiro passou.')+
   `<div class="form" style="margin-bottom:14px"><button class="btn pri" data-act="relatorioPdf" type="button">Baixar relatório em PDF</button><button class="btn" data-act="relatorioCsv" type="button">Baixar planilha (.csv)</button></div>`+
-  (last?ind:'')+
+  (last?ind:'')+painelCustoFixo()+painelCustoVariavel()+
   `<div class="panel"><h2>DRE: Demonstração do Resultado</h2>${h.length?`<div class="tbl"><table><thead><tr><th>Conta</th>${h.map(x=>`<th class="n">M${x.r} · ${x.mes.slice(0,3)}</th>`).join('')}</tr></thead><tbody>
    ${rows.map(([t,k,neg,cls])=>`<tr class="${cls||''}"><td>${t}</td>${h.map(x=>`<td class="n" ${k==='lucro'?`style="color:var(${x.lucro>=0?'--good':'--bad'})"`:k==='taxas'?'style="color:var(--muted)"':''}>${neg&&x[k]?brl(-x[k]):brl(x[k]||0)}</td>`).join('')}</tr>`).join('')}
    </tbody></table></div><p class="small muted">Mostrando os últimos ${h.length} meses. Receita inclui os canais, as taxas de entrega, as encomendas e as vendas avulsas, mesmo as recebidas a prazo. O CMV é o custo médio dos ingredientes que entraram nas pizzas vendidas.</p>`:'<p class="empty">A DRE é gerada quando você fecha o primeiro mês.</p>'}</div>
