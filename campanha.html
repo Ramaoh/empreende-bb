@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Central de Disparos Doce Cerrado</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: painel de operação — configuração no topo, depois a fila de disparos por semana, cada disparo uma linha com ação direta */
+:root{
+  --bg:#F3F1E8; --surface:#FFFDF6; --line:#DCD6C3; --fg:#1E2B23; --muted:#5C6A60;
+  --verde:#2D5B45; --pequi:#B87A00; --pequi-bg:#F7E3B0; --onverde:#F6F1E1;
+  --ig:#B0306A; --fb:#2F5BA8; --wa:#1E7A45; --tk:#3A3A3A;
+  --today:#FFF2CC;
+  --display:'Bricolage Grotesque', 'Trebuchet MS', sans-serif;
+  --body:'Figtree', 'Segoe UI', system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141B17; --surface:#1C2620; --line:#33423A; --fg:#ECE8DA; --muted:#A5B2A9;
+  --verde:#7DB896; --pequi:#F0B840; --pequi-bg:#3D3016; --onverde:#10201A;
+  --ig:#E77FAE; --fb:#8DB0F0; --wa:#6BCF92; --tk:#C9C9C9; --today:#2E2A17; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141B17; --surface:#1C2620; --line:#33423A; --fg:#ECE8DA; --muted:#A5B2A9;
+  --verde:#7DB896; --pequi:#F0B840; --pequi-bg:#3D3016; --onverde:#10201A;
+  --ig:#E77FAE; --fb:#8DB0F0; --wa:#6BCF92; --tk:#C9C9C9; --today:#2E2A17; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.5}
+.wrap{max-width:1040px;margin:0 auto;padding-block:32px 64px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));display:flex;flex-direction:column;gap:28px}
+header{display:flex;flex-direction:column;gap:8px}
+.eyebrow{font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--pequi)}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(32px,6vw,52px);line-height:1;margin:0;color:var(--verde);text-wrap:balance}
+h2{font-family:var(--display);font-weight:800;font-size:24px;margin:0;text-wrap:balance}
+.lead{margin:0;color:var(--muted);max-width:65ch}
+.stats{display:flex;flex-wrap:wrap;gap:12px 28px;font-variant-numeric:tabular-nums;color:var(--muted);font-size:15px}
+.stats b{color:var(--fg);font-size:20px;margin-right:4px}
+.bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden}
+.bar span{display:block;height:100%;background:var(--verde);width:0;transition:width .3s}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:16px}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+label{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;color:var(--muted)}
+input[type=text]{font:inherit;font-size:16px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;min-width:0}
+input:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid var(--pequi);outline-offset:2px}
+.filters{display:flex;flex-wrap:wrap;gap:8px}
+.filters button{font:inherit;font-size:14px;font-weight:600;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:99px;padding:8px 16px;cursor:pointer;min-height:40px}
+.filters button[aria-pressed=true]{background:var(--verde);color:var(--onverde);border-color:var(--verde)}
+.week{display:flex;flex-direction:column;gap:10px}
+.week-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;border-bottom:2px solid var(--verde);padding-bottom:6px}
+.week-head span{color:var(--muted);font-size:14px}
+.item{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;grid-template-columns:110px minmax(0,1fr);gap:16px}
+.item.today{background:var(--today);border-color:var(--pequi)}
+.item.done{opacity:.55}
+.when{display:flex;flex-direction:column;gap:2px;font-variant-numeric:tabular-nums}
+.when .d{font-family:var(--display);font-weight:800;font-size:22px;line-height:1}
+.when .w{font-size:13px;color:var(--muted);text-transform:capitalize}
+.when .h{font-size:15px;font-weight:700}
+.badge-hoje{align-self:flex-start;margin-top:6px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:var(--pequi);color:var(--surface);border-radius:4px;padding:2px 6px}
+.body{display:flex;flex-direction:column;gap:10px;min-width:0}
+.meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px}
+.chip{font-weight:700;border:1.5px solid currentColor;border-radius:99px;padding:2px 10px}
+.chip.Instagram{color:var(--ig)} .chip.Facebook{color:var(--fb)} .chip.WhatsApp{color:var(--wa)} .chip.TikTok{color:var(--tk)}
+.peca{color:var(--muted)}
+.titulo{font-weight:700;font-size:17px;margin:0}
+.texto{white-space:pre-wrap;margin:0;background:var(--bg);border-radius:8px;padding:12px;font-size:15px;overflow-wrap:anywhere}
+.acoes{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn{font:inherit;font-size:14px;font-weight:700;border-radius:8px;padding:9px 14px;cursor:pointer;min-height:40px;display:inline-flex;align-items:center;gap:6px;text-decoration:none;border:1px solid var(--verde);background:var(--verde);color:var(--onverde)}
+.btn.ghost{background:transparent;color:var(--verde)}
+.check{display:inline-flex;flex-direction:row;align-items:center;gap:8px;font-size:14px;color:var(--fg);font-weight:600;margin-left:auto;cursor:pointer;min-height:40px}
+.check input{width:20px;height:20px;accent-color:var(--verde)}
+.how ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-width:70ch}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom, 0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 18px;border-radius:99px;font-weight:600;font-size:14px}
+@media (max-width:560px){.item{grid-template-columns:1fr}.when{flex-direction:row;gap:10px;align-items:baseline;flex-wrap:wrap}.check{margin-left:0}}
+@media (prefers-reduced-motion:reduce){.bar span{transition:none}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">UNEMAT · Engenharia de Produção Agroindustrial · Disciplina de Marketing</div>
+  <h1>Central de Disparos Doce Cerrado</h1>
+  <p class="lead">Campanha "Doce Cerrado: o sabor que nasce aqui", de 19/10 a 15/11/2026. Cada linha é um disparo com dia, horário, rede, peça e texto prontos. Preencham os dados da equipe uma vez e todos os textos se atualizam.</p>
+  <div class="stats" aria-live="polite"><span><b id="s-total">0</b>disparos</span><span><b id="s-feitos">0</b>publicados</span><span><b id="s-hoje">0</b>para hoje</span></div>
+  <div class="bar" aria-hidden="true"><span id="s-bar"></span></div>
+</header>
+
+<section class="panel" aria-labelledby="cfg-t">
+  <h2 id="cfg-t">Dados da equipe</h2>
+  <div class="fields">
+    <label for="f-whats">WhatsApp da equipe<input type="text" id="f-whats" placeholder="(66) 9 9999-9999"></label>
+    <label for="f-insta">Instagram da equipe<input type="text" id="f-insta" placeholder="@docecerrado"></label>
+    <label for="f-local">Local da degustação<input type="text" id="f-local" placeholder="Campus da UNEMAT – Barra do Bugres"></label>
+    <label for="f-dia1">1ª degustação (dia e hora)<input type="text" id="f-dia1" placeholder="sexta, 30/10, às 9h30"></label>
+    <label for="f-dia2">2ª degustação (dia e hora)<input type="text" id="f-dia2" placeholder="quinta, 5/11, às 15h"></label>
+    <label for="f-preco">Preço do kit<input type="text" id="f-preco" placeholder="R$ 33,30"></label>
+  </div>
+</section>
+
+<section class="panel how" aria-labelledby="how-t">
+  <h2 id="how-t">Como colocar no automático</h2>
+  <ol>
+    <li><b>Instagram e Facebook:</b> no Meta Business Suite, conectem as duas contas da equipe e usem "Criar publicação" ou "Criar story" com a opção <b>Agendar</b>. Copiem o texto de cada linha, anexem a imagem indicada em "Peça" e escolham o dia e o horário da linha. Agendem a semana inteira de uma vez, toda segunda-feira.</li>
+    <li><b>WhatsApp:</b> criem no WhatsApp Business uma lista de transmissão "Clientes Doce Cerrado" só com quem pediu para receber ofertas. No horário da linha, toquem em "Abrir no WhatsApp" e escolham a lista.</li>
+    <li><b>TikTok e Reels:</b> gravem o vídeo pelo roteiro da campanha e usem o agendamento do próprio aplicativo ou do Meta Business Suite para os Reels.</li>
+    <li>Marquem <b>Publicado</b> em cada linha. A marcação fica salva neste navegador.</li>
+  </ol>
+</section>
+
+<div class="filters" role="group" aria-label="Filtrar por rede">
+  <button type="button" id="flt-todas" data-f="todas" aria-pressed="true">Todas as redes</button>
+  <button type="button" id="flt-ig" data-f="Instagram" aria-pressed="false">Instagram</button>
+  <button type="button" id="flt-fb" data-f="Facebook" aria-pressed="false">Facebook</button>
+  <button type="button" id="flt-wa" data-f="WhatsApp" aria-pressed="false">WhatsApp</button>
+  <button type="button" id="flt-tk" data-f="TikTok" aria-pressed="false">TikTok e Reels</button>
+  <button type="button" id="flt-pend" data-f="pendentes" aria-pressed="false">Só pendentes</button>
+</div>
+
+<main id="lista" style="display:flex;flex-direction:column;gap:32px"></main>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const SEMANAS={1:['Semana 1 – Aquecimento','19 a 25/10'],2:['Semana 2 – Lançamento do kit','26/10 a 1/11'],3:['Semana 3 – Sustentação','2 a 8/11'],4:['Semana 4 – Fechamento','9 a 15/11']};
+const H='\n\n#DoceCerrado #SaborQueNasceAqui #ProveOCerrado #BarraDoBugres';
+const D=[
+{s:1,d:'2026-10-19',h:'18:00',r:'Instagram',f:'Story com enquete',p:'Foto de um pequi aberto',t:'Novidade da enquete',x:'Pequi: você ama ou odeia? 🗳️\n[Enquete: AMO / NUNCA PROVEI]\nVem coisa boa do cerrado por aí…'},
+{s:1,d:'2026-10-19',h:'19:00',r:'Instagram',f:'Post no feed',p:'Carrossel 1 – Pequi',t:'Apresentação da marca',x:'Chegou a Doce Cerrado! Somos acadêmicos da UNEMAT de Barra do Bugres e fazemos doces artesanais com frutos do cerrado, comprados de quem planta e colhe aqui. Nosso primeiro sabor: geleia de pequi da Cooperativa do Pequi. Siga {insta} para não perder o lançamento.'+H},
+{s:1,d:'2026-10-20',h:'12:00',r:'Facebook',f:'Post na página e em grupos da cidade',p:'Carrossel 1 – Pequi',t:'Apresentação para a cidade',x:'Vizinhos de Barra do Bugres, prazer: somos a Doce Cerrado! Acadêmicos da UNEMAT produzindo geleia de pequi, snack de baru e chips de banana-da-terra com frutos da agricultura familiar da região. Pedidos e dúvidas pelo WhatsApp {whats}.'},
+{s:1,d:'2026-10-21',h:'19:00',r:'TikTok',f:'Vídeo curto (TikTok e Reels)',p:'Vídeo de bastidores, 30 s',t:'Bastidores da geleia',x:'Do pequizeiro ao pote: olha como nasce a nossa geleia 👀 Feita à mão, com polpa da Cooperativa do Pequi. #DoceCerrado #Pequi #FeitoNoCerrado'},
+{s:1,d:'2026-10-22',h:'18:00',r:'Instagram',f:'Story com caixa de perguntas',p:'Fundo verde com logotipo',t:'O que vocês querem provar?',x:'Qual sabor do cerrado você quer provar primeiro?\n[Caixa de perguntas]'},
+{s:1,d:'2026-10-23',h:'19:00',r:'Instagram',f:'Post no feed',p:'Carrossel 2 – Baru',t:'Segundo sabor: baru',x:'Conhece o baru? A castanha do cerrado é coletada e torrada por famílias extrativistas e vira o nosso snack crocante de 50 g. Semana que vem tem lançamento especial. Fique de olho!'+H},
+{s:1,d:'2026-10-24',h:'10:00',r:'WhatsApp',f:'Lista de transmissão e status',p:'Story – Degustação',t:'Convite para a lista',x:'Oi! Aqui é a Doce Cerrado, a marca de doces do cerrado feita por acadêmicos da UNEMAT. Na semana que vem lançamos o Kit Sabores do Cerrado com desconto e degustação grátis no {local}. Quer receber a oferta primeiro? Responda SIM.'},
+{s:2,d:'2026-10-26',h:'19:00',r:'Instagram',f:'Post no feed (carrossel de 4 telas)',p:'Post do feed – Kit + Carrosséis 1, 2 e 3',t:'Lançamento do kit',x:'Chegou o Kit Sabores do Cerrado! Geleia de pequi + snack de baru + chips de banana-da-terra, de R$ 37,00 por {preco}. Tudo feito à mão com frutos da agricultura familiar. Peça pelo WhatsApp {whats}.'+H},
+{s:2,d:'2026-10-26',h:'19:05',r:'Facebook',f:'Post na página e em grupos da cidade',p:'Post do feed – Kit',t:'Lançamento do kit',x:'Lançamento: Kit Sabores do Cerrado por {preco} (10% de desconto). Geleia de pequi, snack de baru e chips de banana-da-terra feitos por acadêmicos da UNEMAT com ingredientes da agricultura familiar. Encomendas: {whats}.'},
+{s:2,d:'2026-10-27',h:'10:00',r:'WhatsApp',f:'Lista de transmissão',p:'Post do feed – Kit',t:'Oferta do kit',x:'Oi! O Kit Sabores do Cerrado já está à venda: geleia de pequi + snack de baru + chips de banana por {preco}. Quer que a gente separe um para você? Entregamos no {local} e no centro. Responda SIM.'},
+{s:2,d:'2026-10-28',h:'18:00',r:'Instagram',f:'Story com contagem regressiva',p:'Story – Degustação',t:'Contagem para a degustação',x:'Degustação grátis: {dia1}, no {local}.\n[Figurinha de contagem regressiva: "Degustação Doce Cerrado"]'},
+{s:2,d:'2026-10-29',h:'19:00',r:'TikTok',f:'Vídeo curto (TikTok e Reels)',p:'Reels de 30 s do roteiro',t:'Reels "Sabe de onde vem o seu doce?"',x:'Sabe de onde vem o seu doce? Daqui do cerrado, de quem planta e colhe 🌳 Prove o cerrado em cada colherada. Kit com 10% off: {whats} #DoceCerrado #Pequi #Baru'},
+{s:2,d:'2026-10-30',h:'08:00',r:'Instagram',f:'Story',p:'Story – Degustação',t:'É hoje!',x:'É HOJE! Degustação grátis da Doce Cerrado, {dia1}, no {local}. Venha provar geleia de pequi, snack de baru e chips de banana.'},
+{s:2,d:'2026-10-30',h:'08:05',r:'WhatsApp',f:'Status',p:'Story – Degustação',t:'É hoje no status',x:'Hoje tem degustação grátis da Doce Cerrado no {local}! Passe para provar 🍯'},
+{s:2,d:'2026-10-30',h:'12:00',r:'Facebook',f:'Post e evento',p:'Story – Degustação',t:'Degustação de hoje',x:'Hoje tem degustação gratuita da Doce Cerrado! {dia1}, no {local}. Quem provar ganha o cartão fidelidade: a cada 5 compras, 1 brigadeiro grátis.'},
+{s:2,d:'2026-10-31',h:'18:00',r:'Instagram',f:'Post no feed',p:'Fotos reais da degustação',t:'Obrigado por provarem',x:'Obrigado a todo mundo que passou na degustação! Quem ainda não provou pode garantir o Kit Sabores do Cerrado por {preco} pelo WhatsApp {whats}.'+H},
+{s:3,d:'2026-11-02',h:'19:00',r:'Instagram',f:'Post no feed',p:'Foto do cliente com o kit (com autorização)',t:'Depoimento de cliente',x:'"[Frase do cliente sobre a geleia de pequi]" – [nome do cliente]\nQuer provar também? Kit por {preco}: {whats}'+H},
+{s:3,d:'2026-11-03',h:'10:00',r:'WhatsApp',f:'Lista de transmissão',p:'Post do feed – Kit',t:'Indique um amigo',x:'Indique um amigo para a Doce Cerrado! Quando ele comprar, vocês dois ganham 1 brigadeiro gourmet. É só ele dizer seu nome no pedido. Pedidos: {whats}.'},
+{s:3,d:'2026-11-04',h:'18:00',r:'Instagram',f:'Story',p:'Repost das marcações de clientes',t:'Clientes provando',x:'Olha quem já provou o cerrado em cada colherada 💛 Marque {insta} quando receber o seu kit!'},
+{s:3,d:'2026-11-05',h:'08:00',r:'Instagram',f:'Story',p:'Story – Degustação',t:'2ª degustação',x:'Segunda rodada de degustação grátis: {dia2}, no {local}. Traga um amigo!'},
+{s:3,d:'2026-11-05',h:'19:00',r:'TikTok',f:'Vídeo curto (TikTok e Reels)',p:'Vídeo com o agricultor fornecedor',t:'Quem planta o nosso sabor',x:'Esse é [nome do agricultor], que fornece [pequi, banana ou baru] para a Doce Cerrado. Comprar da agricultura familiar é manter o cerrado vivo 🌱 #AgriculturaFamiliar #DoceCerrado'},
+{s:3,d:'2026-11-06',h:'12:00',r:'Facebook',f:'Post na página e em grupos',p:'Foto do agricultor e dos produtos',t:'Agricultura familiar',x:'Cada pote da Doce Cerrado começa no sítio de uma família da região. Nossos fornecedores: Cooperativa do Pequi, Feira da Agricultura Familiar e Extrativistas do Baru. Encomende o seu kit: {whats}.'},
+{s:3,d:'2026-11-07',h:'10:00',r:'WhatsApp',f:'Lista de transmissão',p:'Story – Degustação',t:'Lembrete para empresas e clientes',x:'Oi! A Doce Cerrado agora atende cafés, cantinas e buffets, com 5% de desconto em pedidos acima de 20 unidades. Conhece alguém? Repasse esta mensagem 🙂 {whats}'},
+{s:4,d:'2026-11-09',h:'19:00',r:'Instagram',f:'Post no feed',p:'Post do feed – Kit',t:'Últimos dias do desconto',x:'Últimos dias! O Kit Sabores do Cerrado com 10% de desconto vai só até domingo, 15/11. Garanta o seu por {preco} pelo WhatsApp {whats}.'+H},
+{s:4,d:'2026-11-10',h:'10:00',r:'WhatsApp',f:'Lista de transmissão',p:'Post do feed – Kit',t:'Últimos dias no WhatsApp',x:'Faltam poucos dias para o fim da oferta do Kit Sabores do Cerrado por {preco}. Quer garantir o seu? Responda KIT.'},
+{s:4,d:'2026-11-11',h:'18:00',r:'Instagram',f:'Story com contagem regressiva',p:'Fundo amarelo com o kit',t:'Faltam 4 dias',x:'Faltam 4 dias para acabar o desconto do kit!\n[Figurinha de contagem regressiva até 15/11]'},
+{s:4,d:'2026-11-13',h:'19:00',r:'Instagram',f:'Post no feed',p:'Foto da equipe com o agricultor',t:'Agradecimento',x:'Obrigado, Barra do Bugres! Em quatro semanas, [número] pessoas provaram o cerrado com a gente. Agradecemos aos agricultores familiares que fazem tudo isso possível.'+H},
+{s:4,d:'2026-11-13',h:'19:05',r:'Facebook',f:'Post na página',p:'Foto da equipe com o agricultor',t:'Agradecimento',x:'Obrigado a todos que apoiaram a Doce Cerrado nestas quatro semanas! Seguimos com encomendas pelo WhatsApp {whats}.'},
+{s:4,d:'2026-11-14',h:'10:00',r:'WhatsApp',f:'Lista de transmissão',p:'Cartão fidelidade',t:'Fidelização',x:'Obrigado por comprar da Doce Cerrado! Guarde seu cartão fidelidade: na 5ª compra você ganha 1 brigadeiro gourmet. Até o próximo pedido!'},
+{s:4,d:'2026-11-15',h:'18:00',r:'Instagram',f:'Story',p:'Fundo verde com logotipo',t:'Encerramento da oferta',x:'Hoje é o último dia do kit com desconto! Pedidos até as 22h pelo WhatsApp {whats}.'}
+];
+const KEYS=['whats','insta','local','dia1','dia2','preco'];
+const DEF={whats:'[SEU WHATSAPP]',insta:'[@SEU_INSTAGRAM]',local:'campus da UNEMAT – Barra do Bugres',dia1:'[DIA E HORA DA 1ª DEGUSTAÇÃO]',dia2:'[DIA E HORA DA 2ª DEGUSTAÇÃO]',preco:'R$ 33,30'};
+const ls={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+let cfg={};KEYS.forEach(k=>cfg[k]=ls.get('dc-'+k)||'');
+let feitos={};try{feitos=JSON.parse(ls.get('dc-feitos')||'{}')}catch(e){feitos={}}
+let filtro='todas';
+const hojeISO=(()=>{const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0')})();
+const fmt=s=>{const [y,m,d]=s.split('-').map(Number);const dt=new Date(y,m-1,d);return {d:String(d).padStart(2,'0')+'/'+String(m).padStart(2,'0'),w:dt.toLocaleDateString('pt-BR',{weekday:'long'})}};
+const preencher=x=>x.replace(/\{(\w+)\}/g,(_,k)=>(cfg[k]||'').trim()||DEF[k]);
+const id=it=>it.d+'_'+it.h+'_'+it.r;
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,1800)}
+function el(tag,attrs,...kids){const e=document.createElement(tag);for(const k in attrs||{}){if(k==='class')e.className=attrs[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),attrs[k]);else e.setAttribute(k,attrs[k])}kids.flat().forEach(c=>e.append(c));return e}
+function render(){
+  const main=document.getElementById('lista');main.replaceChildren();
+  [1,2,3,4].forEach(s=>{
+    const itens=D.filter(it=>it.s===s&&(filtro==='todas'||(filtro==='pendentes'?!feitos[id(it)]:it.r===filtro)));
+    if(!itens.length)return;
+    const sec=el('section',{class:'week'},el('div',{class:'week-head'},el('h2',{},SEMANAS[s][0]),el('span',{},SEMANAS[s][1])));
+    itens.forEach(it=>{
+      const k=id(it),txt=preencher(it.x),f=fmt(it.d),hoje=it.d===hojeISO;
+      const cb=el('input',{type:'checkbox',id:'c-'+k.replace(/[^\w]/g,'')});cb.checked=!!feitos[k];
+      cb.addEventListener('change',()=>{feitos[k]=cb.checked;if(!cb.checked)delete feitos[k];ls.set('dc-feitos',JSON.stringify(feitos));render()});
+      const acoes=el('div',{class:'acoes'},
+        el('button',{type:'button',class:'btn',onclick:()=>copiar(txt,pre)},'Copiar texto'));
+      if(it.r==='WhatsApp')acoes.append(el('a',{class:'btn ghost',href:'https://wa.me/?text='+encodeURIComponent(txt),target:'_blank',rel:'noopener'},'Abrir no WhatsApp'));
+      if(it.r==='Instagram'||it.r==='Facebook')acoes.append(el('a',{class:'btn ghost',href:'https://business.facebook.com/latest/composer',target:'_blank',rel:'noopener'},'Agendar no Meta Business Suite'));
+      if(it.r==='TikTok')acoes.append(el('a',{class:'btn ghost',href:'https://www.tiktok.com/tiktokstudio/upload',target:'_blank',rel:'noopener'},'Abrir o TikTok Studio'));
+      acoes.append(el('label',{class:'check',for:cb.id},cb,'Publicado'));
+      const pre=el('p',{class:'texto'},txt);
+      const when=el('div',{class:'when'},el('span',{class:'d'},f.d),el('span',{class:'w'},f.w),el('span',{class:'h'},it.h));
+      if(hoje)when.append(el('span',{class:'badge-hoje'},'Hoje'));
+      sec.append(el('article',{class:'item'+(hoje?' today':'')+(feitos[k]?' done':'')},when,
+        el('div',{class:'body'},el('div',{class:'meta'},el('span',{class:'chip '+it.r},it.r==='TikTok'?'TikTok e Reels':it.r),el('span',{},it.f),el('span',{class:'peca'},'Peça: '+it.p)),
+          el('p',{class:'titulo'},it.t),pre,acoes)));
+    });
+    main.append(sec);
+  });
+  const tot=D.length,fe=D.filter(it=>feitos[id(it)]).length,hj=D.filter(it=>it.d===hojeISO).length;
+  document.getElementById('s-total').textContent=tot;document.getElementById('s-feitos').textContent=fe;document.getElementById('s-hoje').textContent=hj;
+  document.getElementById('s-bar').style.width=(fe/tot*100)+'%';
+}
+function copiar(txt,node){
+  const ok=()=>toast('Texto copiado');
+  try{navigator.clipboard.writeText(txt).then(ok,()=>sel(node))}catch(e){sel(node)}
+}
+function sel(node){const r=document.createRange();r.selectNodeContents(node);const s=getSelection();s.removeAllRanges();s.addRange(r);toast('Texto selecionado: use Copiar do aparelho')}
+KEYS.forEach(k=>{const i=document.getElementById('f-'+k);i.value=cfg[k];i.addEventListener('input',()=>{cfg[k]=i.value;ls.set('dc-'+k,i.value);render()})});
+document.querySelectorAll('.filters button').forEach(b=>b.addEventListener('click',()=>{filtro=b.dataset.f;document.querySelectorAll('.filters button').forEach(x=>x.setAttribute('aria-pressed',x===b));render()}));
+render();
+</script>
+</body>
+</html>
