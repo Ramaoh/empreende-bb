@@ -224,9 +224,9 @@ function toast(msg,bad){const t=$('#toast');t.textContent=msg;t.className='toast
 /* ====================== caso: Laticínios Serra Azul ====================== */
 const ANO0=2027, HORIZONTE=5, NAC_F=2.5, TRIB0=0.065, IR=0.34, ADM0=9000, SELIC0=0.105, COLAB0=420;
 const PROD0={
-  uht:{nome:'Leite UHT',un:'mil L',uP:'R$/L',preco:4.75,leite:1,insumo:0.55,proc:0.40,merc:120000,g:0.02,share:0.15,lider:0.30,cap:22000,elast:2.2,nac:false,capexU:1.2,lote:5000},
-  qjo:{nome:'Queijo muçarela',un:'t',uP:'R$/kg',preco:33.5,leite:10,insumo:1.2,proc:2.5,merc:40000,g:0.05,share:0.075,lider:0.22,cap:3700,elast:2.0,nac:true,capexU:8,lote:500},
-  iog:{nome:'Iogurte e bebida láctea',un:'mil L',uP:'R$/L',preco:7.5,leite:0.9,insumo:1.9,proc:0.7,merc:30000,g:0.09,share:0.05,lider:0.35,cap:2300,elast:1.8,nac:true,capexU:3,lote:1000},
+  uht:{nome:'Leite UHT',un:'mil L',uP:'R$/L',preco:4.75,leite:1,insumo:0.55,proc:0.40,merc:120000,g:0.02,share:0.15,lider:0.12,cap:22000,elast:2.2,nac:false,capexU:1.2,lote:5000},
+  qjo:{nome:'Queijo muçarela',un:'t',uP:'R$/kg',preco:33.5,leite:10,insumo:1.2,proc:2.5,merc:40000,g:0.05,share:0.075,lider:0.06,cap:3700,elast:2.0,nac:true,capexU:8,lote:500},
+  iog:{nome:'Iogurte e bebida láctea',un:'mil L',uP:'R$/L',preco:7.5,leite:0.9,insumo:1.9,proc:0.7,merc:30000,g:0.09,share:0.05,lider:0.04,cap:2300,elast:1.8,nac:true,capexU:3,lote:1000},
   ddl:{nome:'Doce de leite',un:'t',uP:'R$/kg',preco:18,leite:2.5,insumo:2.8,proc:1.6,merc:6000,g:0.01,share:0.05,lider:0.25,cap:450,elast:1.6,nac:true,capexU:6,lote:200}
 };
 const NOVOS={
@@ -296,6 +296,7 @@ function migrar(o){
   for(const k in b)if(o[k]==null)o[k]=b[k];
   for(const k in b.plano)if(o.plano[k]==null)o.plano[k]=b.plano[k];
   for(const k in b.empresa)if(o.empresa[k]==null)o.empresa[k]=b.empresa[k];
+  {const velho={uht:0.30,qjo:0.22,iog:0.35};if(o.sim&&o.sim.prod&&!o.liderV2){for(const k in velho){const x=o.sim.prod[k];if(x&&Math.abs((+x.lider||0)-velho[k])<1e-9)x.lider=PROD0[k].lider}o.liderV2=true}}
   return o;
 }
 function load(){try{const t=localStorage.getItem(KEY);if(t){const o=JSON.parse(t);if(o&&o.app==='agroestrategia'){S=migrar(o);return}}}catch(e){}S=seed();save()}
@@ -478,7 +479,7 @@ function bcgSVG(items,o={}){
   let s=q(L,T,cx,cy,'var(--q2)','Estrelas')+q(cx,T,W-R,cy,'var(--q3)','Pontos de interrogação')+q(L,cy,cx,H-B,'var(--q1)','Vacas leiteiras')+q(cx,cy,W-R,H-B,'var(--q4)','Abacaxis');
   s+=`<line x1="${cx}" x2="${cx}" y1="${T}" y2="${H-B}" stroke="var(--muted)" stroke-dasharray="4 3"/><line x1="${L}" x2="${W-R}" y1="${cy}" y2="${cy}" stroke="var(--muted)" stroke-dasharray="4 3"/>`;
   [0.1,0.25,0.5,1,2,4].forEach(v=>s+=`<text x="${X(v)}" y="${H-B+16}" text-anchor="middle" class="ax">${num(v,v<1?2:0)}×</text>`);
-  for(let v=Math.ceil(gMin*20)/20;v<=gMax;v+=0.05)s+=`<text x="${L-8}" y="${Y(v)+4}" text-anchor="end" class="ax">${num(v*100)}%</text>`;
+  for(let v=Math.ceil(gMin*20)/20;v<=gMax;v+=0.05)s+=`<text x="${L-8}" y="${Y(v)+4}" text-anchor="end" class="ax">${num(Math.round(v*100)||0)}%</text>`;
   s+=`<text x="${(L+W-R)/2}" y="${H-8}" text-anchor="middle" class="ax">Participação relativa (sua participação ÷ a do maior concorrente) · escala log, alta à esquerda</text><text transform="translate(14 ${(T+H-B)/2}) rotate(-90)" text-anchor="middle" class="ax">Crescimento do mercado</text>`;
   items.forEach((i,k)=>{const r=10+28*Math.sqrt((i.rec||1)/rMax);const px=X(i.rs),py=Y(i.g);const col=['var(--q1)','var(--q2)','var(--q3)','var(--q4)','var(--brand)','var(--accent)'][k%6];
     s+=`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${r.toFixed(1)}" fill="${col}" fill-opacity=".55" stroke="${col}" stroke-width="2"><title>${esc(i.nome)}: crescimento ${pct(i.g)}, participação relativa ${num(i.rs,2)}×</title></circle><text x="${px.toFixed(1)}" y="${(py+r+13).toFixed(1)}" text-anchor="middle" class="lb">${esc(i.nome.length>22?i.nome.slice(0,21)+'…':i.nome)}</text>`});
