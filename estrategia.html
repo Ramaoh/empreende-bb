@@ -432,6 +432,7 @@ function tabela(path,cols,tpl,o={}){
   </tbody></table></div><div><button class="btn sm" type="button" data-act="add" data-path="${path}" data-tpl="${tpl}">${o.add||'Adicionar linha'}</button></div>`;
 }
 const TPL={
+  acaoMkt:()=>({acao:'',linha:'',canal:'',quando:'',custo:0,indicador:'',meta:''}),
   pestel:()=>({dim:'E',fator:'',tend:'',tipo:'O',imp:3,prob:3}),
   vrio:()=>({rec:'',v:false,r:false,i:false,o:false}),
   swot:()=>({q:'f',t:'',j:'',src:'manual'}),
@@ -666,14 +667,14 @@ function vProjeto(){
   return head('Visão geral','Projeto e roteiro','Projeto Aplicado de Planejamento Estratégico em uma Agroindústria · Universidade do Estado de Mato Grosso – UNEMAT · Curso de Engenharia de Produção Agroindustrial · Disciplina de Planejamento Estratégico · Prof. Dr. Ramão Humberto Martins Manvailer · Turma 2026/2')+
   `<div class="panel"><h2>Grupo</h2><div class="fields"><label>Nome do grupo${inp('grupo.nome',{ph:'Ex.: Grupo 3'})}</label><label class="wide">Integrantes${inp('grupo.integrantes',{ph:'Nomes completos, separados por vírgula'})}</label><label>Turma${inp('grupo.turma')}</label></div></div>
   <div class="grid2"><div class="panel"><h2>Cronograma de entregas</h2><div class="tbl"><table><thead><tr><th>Etapa</th><th>Conteúdo</th><th>Prazo</th></tr></thead><tbody>
-   <tr><td><b>Parte I</b><br><span class="small muted">Unidades I e II</span></td><td class="small"><b>Diagnóstico:</b> caracterização, fundamentação, identidade, PESTEL, Cinco Forças, diagnóstico interno e SWOT. <b>Formulação:</b> SWOT cruzada, BCG e Ansoff, estratégias competitivas, estratégia de produção, objetivos e GUT. Texto em Word ou PDF e vídeo.</td><td>23/10/2026</td></tr>
-   <tr><td><b>Parte II</b><br><span class="small muted">Unidade III</span></td><td class="small">Projeto completo: BSC, mapa estratégico, KPIs, metas SMART, 5W2H, controle, planos funcionais e considerações finais. Relatório em Word ou PDF e seminário de até 20 minutos.</td><td>27/11/2026</td></tr></tbody></table></div>
+   <tr><td><b>Parte I</b><br><span class="small muted">Unidades I e II</span></td><td class="small"><b>Diagnóstico:</b> caracterização, fundamentação, identidade, PESTEL, Cinco Forças, diagnóstico interno e SWOT. <b>Formulação:</b> SWOT cruzada, BCG e Ansoff, estratégias competitivas, estratégia de produção, objetivos e GUT. Texto em Word e vídeo.</td><td>23/10/2026</td></tr>
+   <tr><td><b>Parte II</b><br><span class="small muted">Unidade III</span></td><td class="small">Projeto completo: BSC, mapa estratégico, KPIs, metas SMART, 5W2H, controle, planos funcionais e considerações finais. Seminário de até 20 minutos.</td><td>27/11/2026</td></tr></tbody></table></div>
    <p class="small muted">Envio: ramaohumberto@unemat.br</p></div>
    <div class="panel"><h2>Agroindústria analisada</h2><p class="sub">O plano pode ser feito sobre o caso simulado (Laticínios Serra Azul), cujos números vêm da simulação, ou sobre uma agroindústria real escolhida pelo grupo. As ferramentas são as mesmas.</p>
     <div class="form"><button class="btn ${S.modo==='sim'?'pri':''}" type="button" data-act="modo" data-v="sim">Caso simulado: Laticínios Serra Azul</button><button class="btn ${S.modo==='real'?'pri':''}" type="button" data-act="modo" data-v="real">Agroindústria real do grupo</button></div>
     <p class="small muted">${S.modo==='real'?'Modo agroindústria real: a caracterização começa em branco e a BCG usa os dados que o grupo informar. A simulação continua disponível como laboratório.':'Modo caso simulado: a caracterização vem preenchida e a BCG e os KPIs usam os resultados da simulação.'}</p></div></div>
   <div class="panel"><h2>Sequência lógica do projeto</h2>${steps(['Caracterização e cadeia','Missão, visão e valores','PESTEL, Porter e diagnóstico interno','SWOT','SWOT cruzada','BCG, estratégia competitiva e de produção','GUT','Objetivos','BSC e mapa','KPIs e metas SMART','5W2H','Controle e avaliação'])}
-   <p class="tip">Em cada ferramenta: <b>fundamentação teórica → aplicação → resultado → análise e interpretação → implicações estratégicas</b>. O painel "Fundamentação, análise e implicações" no fim de cada tela organiza esse texto, que vai para o relatório em Word e em PDF.</p></div>
+   <p class="tip">Em cada ferramenta: <b>fundamentação teórica → aplicação → resultado → análise e interpretação → implicações estratégicas</b>. O painel "Fundamentação, análise e implicações" no fim de cada tela organiza esse texto, que vai para o relatório em Word.</p></div>
   <div class="grid2"><div class="panel"><h2>Salvamento</h2><p class="sub">Tudo é salvo automaticamente neste navegador. Para levar o trabalho a outro computador ou juntar o grupo, baixe o arquivo do grupo e abra no outro aparelho.</p>
    <div class="form"><button class="btn pri" type="button" data-act="baixarJson">Baixar arquivo do grupo</button><button class="btn" type="button" data-act="abrirJson">Abrir arquivo do grupo</button><input type="file" id="arq" accept=".json,application/json" hidden></div>
    <p class="small muted">Última gravação: ${S.salvoEm?new Date(S.salvoEm).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'—'}</p></div>
@@ -764,16 +765,39 @@ function vTows(){
   <div class="form"><button class="btn pri" type="button" data-act="towsGut">Levar alternativas para a Matriz GUT</button></div>
   ${fund('tows','SWOT cruzada',['Cruzamento dos quadrantes da SWOT (matriz TOWS, Weihrich, 1982).','Transformar o diagnóstico em alternativas estratégicas.','Combinam-se forças e fraquezas com oportunidades e ameaças, gerando estratégias ofensivas, de confronto, de reforço e defensivas.','Liga diretamente o diagnóstico à formulação.','As alternativas são priorizadas na GUT e viram objetivos.'])}`;
 }
+function bcgFonte(){if(S.modo!=='sim')return 'manual';const f=S.plano.bcgFonte;if(f==='manual'||f==='previa')return f;return ult()?'ult':'previa'}
+function bcgItens(f){
+  if(f==='manual')return (S.plano.port||[]).map(x=>({nome:x.nome||'Produto',g:(+x.g||0)/100,rs:+x.rs||0.1,rec:+x.rec||1}));
+  return Object.values((f==='ult'&&ult()?ult():previa()).P).map(x=>({nome:x.nome,g:x.g,rs:x.rs,rec:x.rev}));
+}
+const PROD_NOVO={nome:'Novo produto',un:'t',uP:'R$/kg',preco:20,leite:5,insumo:1.5,proc:1.5,merc:5000,g:0.05,share:0.05,lider:0.25,cap:400,elast:1.8,nac:true,capexU:8,lote:100};
+function editorPortfolio(gCut){
+  const sim=S.sim,ks=Object.keys(sim.prod).filter(k=>sim.prod[k].status!=='removido');
+  const f=(k,c,o)=>{const p=sim.prod[k],v=p[c];
+    if(o.t)return `<input type="text" data-k="sim.prod.${k}.${c}" data-r="1" id="pf_${k}_${c}" value="${esc(v??'')}" style="width:${o.w||70}px">`;
+    if(o.chk)return `<input type="checkbox" data-k="sim.prod.${k}.${c}" data-r="1" id="pf_${k}_${c}" ${v?'checked':''}>`;
+    const val=o.pct?r1((+v||0)*100):(+v||0);
+    return `<input type="number" data-k="sim.prod.${k}.${c}" ${o.pct?'data-pct="1"':'data-n="1"'} data-r="1" id="pf_${k}_${c}" value="${val}" step="${o.step||1}" min="${o.min??0}" ${o.max!=null?`max="${o.max}"`:''} style="width:${o.w||80}px">`};
+  return `<details class="panel" style="margin-top:12px" ${S._portAberto?'open':''}><summary style="cursor:pointer;font-weight:700" data-act="portToggle">Configurar o portfólio da simulação (produtos, mercados e participação)</summary>
+   <p class="small">Altere os parâmetros de cada linha de produto, inclua ou retire produtos. As mudanças valem para os próximos anos da simulação deste grupo e aparecem na matriz quando a fonte é a <b>prévia do ano atual</b>. <b>Participação relativa = participação da empresa ÷ participação do líder</b>: acima de 1,0× a empresa lidera o mercado. A linha de corte do crescimento define o que é mercado de alto crescimento.</p>
+   <div class="tbl"><table><thead><tr><th>Produto</th><th>Unidade</th><th class="n">Preço</th><th class="n">Mercado (un/ano)</th><th class="n">Crescimento (%/ano)</th><th class="n">Participação da empresa (%)</th><th class="n">Participação do líder (%)</th><th class="n">Part. relativa</th><th>Quadrante BCG</th><th class="n">Capacidade (un/ano)</th><th class="n">Elasticidade-preço</th><th class="n">Leite por unidade</th><th class="n">Insumos (R$/un)</th><th class="n">Processamento (R$/un)</th><th>Mercado nacional</th><th></th></tr></thead><tbody>
+   ${ks.map(k=>{const p=sim.prod[k],ativo=p.status==='ativo',rs=(+p.s||0)/Math.max(+p.lider||0.01,0.01);return `<tr ${ativo?'':'style="opacity:.6"'}><td>${f(k,'nome',{t:1,w:170})}${NOVOS[k]?' <span class="pill brand">novo negócio</span>':''}${ativo?'':` <span class="pill warn">${p.status==='obra'?'em implantação':'inativo'}</span>`}</td><td>${f(k,'un',{t:1,w:60})}</td><td class="n">${f(k,'preco',{step:0.05,w:75})}<br><span class="small muted">${esc(p.uP||'')}</span></td><td class="n">${f(k,'merc',{step:100,w:95})}</td><td class="n">${f(k,'g',{pct:1,step:0.5,min:-20,max:50,w:70})}</td><td class="n">${f(k,'s',{pct:1,step:0.5,max:60,w:70})}</td><td class="n">${f(k,'lider',{pct:1,step:0.5,min:1,max:90,w:70})}</td><td class="n"><b>${num(rs,2)}×</b></td><td>${bcgClasse(+p.g||0,rs,gCut)}</td><td class="n">${f(k,'cap',{step:50,w:85})}</td><td class="n">${f(k,'elast',{step:0.1,min:0.5,max:4,w:65})}</td><td class="n">${f(k,'leite',{step:0.1,w:65})}</td><td class="n">${f(k,'insumo',{step:0.05,w:70})}</td><td class="n">${f(k,'proc',{step:0.05,w:70})}</td><td>${f(k,'nac',{chk:1})}</td><td><button class="btn sm ghost" type="button" data-act="portDel" data-k="${k}">Retirar</button></td></tr>`}).join('')}
+   </tbody></table></div>
+   <div class="form" style="margin-top:8px"><button class="btn sm" type="button" data-act="portAdd">Adicionar produto</button><button class="btn sm ghost" type="button" data-act="portReset">Restaurar o portfólio original</button></div>
+   <p class="small muted">Unidade e preço seguem o padrão do caso: quantidades em mil L ou t e preço em R$ por L ou kg. "Leite por unidade" é o leite cru consumido por unidade produzida (use 0 para produtos que não usam leite). Elasticidade-preço indica quanto a procura reage a mudanças de preço. Produtos novos entram com parâmetros padrão: ajuste antes de encerrar o ano.</p>
+  </details>`;
+}
 function vPortfolio(){
   const gCut=S.plano.gCut??0.06,P=S.plano;P.port=P.port||[];
-  const fonte=S.modo==='sim'?'sim':'manual';
-  const items=fonte==='sim'?Object.values((ult()||previa()).P).map(x=>({nome:x.nome,g:x.g,rs:x.rs,rec:x.rev})):P.port.map(x=>({nome:x.nome||'Produto',g:(+x.g||0)/100,rs:+x.rs||0.1,rec:+x.rec||1}));
+  const fonte=bcgFonte();
+  const items=bcgItens(fonte);
   const A=P.ansoff=P.ansoff||{};
   return head('Parte I · Formulação','Portfólio: Matriz BCG e Matriz de Ansoff','A BCG posiciona cada produto ou unidade de negócio pelo crescimento do mercado e pela participação relativa. A matriz de Ansoff organiza as opções de crescimento.')+
-  `<div class="panel"><div class="form"><label>Linha de corte do crescimento (%)<input type="number" min="0" max="30" step="0.5" value="${r1(gCut*100)}" data-k="plano.gCut" data-pct="1" data-r="1" id="gcut"></label><span class="small muted" style="padding-bottom:8px">${fonte==='sim'?'Dados: simulação ('+(ult()?'último ano encerrado':'prévia')+').':'Dados informados pelo grupo (modo agroindústria real).'}</span></div>
+  `<div class="panel"><div class="form"><label>Linha de corte do crescimento (%)<input type="number" min="0" max="30" step="0.5" value="${r1(gCut*100)}" data-k="plano.gCut" data-pct="1" data-r="1" id="gcut"></label>${S.modo==='sim'?`<label>Dados da matriz<select data-k="plano.bcgFonte" data-r="1" id="bcg_fonte"><option value="ult" ${fonte==='ult'?'selected':''} ${ult()?'':'disabled'}>Último ano encerrado da simulação</option><option value="previa" ${fonte==='previa'?'selected':''}>Prévia do ano atual (parâmetros e decisões atuais)</option><option value="manual" ${fonte==='manual'?'selected':''}>Dados informados pelo grupo</option></select></label>`:''}<span class="small muted" style="padding-bottom:8px">${fonte==='ult'?'Dados: simulação, último ano encerrado.':fonte==='previa'?'Dados: prévia do ano atual, já com as alterações do portfólio.':'Dados informados pelo grupo.'}</span></div>
   ${bcgSVG(items,{gCut,id:'svgBcg'})}
   <div class="tbl"><table><thead><tr><th>Produto</th><th class="n">Crescimento</th><th class="n">Part. relativa</th><th>Classificação</th></tr></thead><tbody>${items.map(i=>`<tr><td>${esc(i.nome)}</td><td class="n">${pct(i.g)}</td><td class="n">${num(i.rs,2)}×</td><td>${bcgClasse(i.g,i.rs,gCut)}</td></tr>`).join('')}</tbody></table></div>
-  ${fonte==='manual'?`<h3>Dados dos produtos</h3>${tabela('plano.port',[{k:'nome',l:'Produto ou unidade',w:180,r:1},{k:'g',l:'Crescimento do mercado (%)',n:1,step:0.5,r:1},{k:'rs',l:'Part. relativa (×)',n:1,step:0.05,r:1},{k:'rec',l:'Receita',n:1,step:100,r:1}],'port',{add:'Adicionar produto'})}`:''}</div>
+  ${S.modo==='sim'?editorPortfolio(gCut):''}
+  ${fonte==='manual'?`<h3>Dados dos produtos</h3>${S.modo==='sim'&&!(P.port||[]).length?'<p class="small"><button class="btn sm" type="button" data-act="portCopiar">Copiar os produtos da simulação para começar</button></p>':''}${tabela('plano.port',[{k:'nome',l:'Produto ou unidade',w:180,r:1},{k:'g',l:'Crescimento do mercado (%)',n:1,step:0.5,r:1},{k:'rs',l:'Part. relativa (×)',n:1,step:0.05,r:1},{k:'rec',l:'Receita',n:1,step:100,r:1}],'port',{add:'Adicionar produto'})}`:''}</div>
   ${fund('bcg','Matriz BCG',['Matriz de crescimento-participação do Boston Consulting Group (Henderson, 1970).','Equilibrar o portfólio: geração e uso de caixa entre produtos.','Cruza o crescimento do mercado com a participação relativa; o tamanho do círculo indica a receita.','Permite discutir onde investir, manter ou desinvestir.','Na agroindústria, observe coprodutos e sazonalidade; se não for adequada, justifique e use outra ferramenta.'])}
   <div class="panel"><h2>Matriz de Ansoff</h2><p class="sub">Registre as estratégias de crescimento da agroindústria em cada quadrante.</p>
   <div class="swot">${[['pen','Penetração de mercado','produtos atuais · mercados atuais'],['dm','Desenvolvimento de mercado','produtos atuais · mercados novos'],['dp','Desenvolvimento de produto','produtos novos · mercados atuais'],['div','Diversificação','produtos novos · mercados novos']].map(([k,t,s],i)=>`<div class="swq ${['f','o','a','fq'][i]}"><h3>${t}<span class="small muted" style="font-family:var(--f-body);font-weight:400">${s}</span></h3>${inp('plano.ansoff.'+k,{type:'area',rows:3})}</div>`).join('')}</div></div>`;
@@ -898,6 +922,8 @@ function vControle(){
   ${fund('controle','Controle e avaliação estratégica',['Processo de acompanhar a execução e corrigir o rumo (PDCA).','Garantir que os resultados estratégicos sejam alcançados.','Compara-se o realizado com as metas; desvios geram ações corretivas.','Sem controle, o plano vira documento de gaveta.','Define a rotina de gestão da estratégia na agroindústria.'])}`;
 }
 /* ---------- Planos funcionais (nível tático) ---------- */
+const DIR_BCG={'Estrela':'Investir para manter a liderança em mercado que cresce.','Vaca leiteira':'Manter e colher caixa; defender a participação com eficiência.','Ponto de interrogação':'Investir de forma seletiva para ganhar participação, ou sair.','Abacaxi':'Reposicionar, reduzir custos ou desinvestir.'};
+function acoesCusto(){return ((S.plano.mkt||{}).lista||[]).reduce((a,x)=>a+(+x.custo||0),0)}
 function vPlanoMkt(){
   const M=S.plano.mkt=S.plano.mkt||{},p=previa();M.mix=M.mix||{};
   const linhas=Object.values(p.P);
@@ -905,10 +931,13 @@ function vPlanoMkt(){
   `<div class="panel"><div class="fields"><label class="wide">Análise de mercado e consumidor${inp('plano.mkt.analise',{type:'area',rows:3,ph:'Tamanho e crescimento dos mercados, comportamento do consumidor de lácteos, tendências (proteína, saudabilidade, origem).'})}</label>
   <label>Segmentação${inp('plano.mkt.segmentos',{type:'area',ph:'Ex.: varejo regional, food service, compras públicas, consumidor fitness'})}</label><label>Público-alvo prioritário${inp('plano.mkt.publico',{type:'area'})}</label><label class="wide">Posicionamento${inp('plano.mkt.posicionamento',{type:'area',ph:'Para [público], a [marca] é a [categoria] que [benefício], porque [prova].'})}</label></div></div>
   <div class="panel"><h2>Composto de marketing por linha (4 Ps)</h2><div class="tbl"><table><thead><tr><th>Linha</th><th style="min-width:170px">Produto</th><th style="min-width:150px">Preço</th><th style="min-width:150px">Praça (canais)</th><th style="min-width:170px">Promoção</th></tr></thead><tbody>
-  ${linhas.map(x=>{M.mix[x.k]=M.mix[x.k]||{};return `<tr><td><b>${esc(x.nome)}</b><br><span class="small muted">preço praticado ${num(x.preco,2)} · ${x.dp>0?'+':''}${num(x.dp*100)}% vs. mercado</span></td>${['produto','preco','praca','promocao'].map(f=>`<td>${inp(`plano.mkt.mix.${x.k}.${f}`,{type:'area',rows:2})}</td>`).join('')}</tr>`}).join('')}</tbody></table></div></div>
-  <div class="grid2"><div class="panel"><h2>Metas e orçamento</h2><div class="row"><span>Orçamento de marketing deste ano</span><b>${mil(+S.dec.prog.mkt||0)}</b></div><div class="row"><span>Percentual da receita prevista</span><b>${pct((+S.dec.prog.mkt||0)/Math.max(p.dre.rb,1),2)}</b></div><div class="row"><span>Participação de mercado prevista</span><b>${pct(p.kpi.share)}</b></div><div class="row"><span>Satisfação prevista</span><b>${num(p.kpi.satisf)}/100</b></div>
+  ${linhas.map(x=>{M.mix[x.k]=M.mix[x.k]||{};const q=bcgClasse(x.g,x.rs,S.plano.gCut??0.06);return `<tr><td><b>${esc(x.nome)}</b><br><span class="pill ${q==='Estrela'?'good':q==='Vaca leiteira'?'brand':q==='Abacaxi'?'bad':'warn'}">${q}</span><br><span class="small muted">${DIR_BCG[q]}</span><div class="form" style="margin-top:6px"><label class="small">Preço vs. mercado (%)<input type="number" min="-15" max="15" step="1" value="${Math.round((+S.dec.preco[x.k]||0)*100)}" data-k="dec.preco.${x.k}" data-pct="1" data-r="1" id="mk_pr_${x.k}" style="width:70px"></label></div><span class="small muted">preço praticado ${num(x.preco,2)} · share previsto ${pct(x.s)}</span></td>${['produto','preco','praca','promocao'].map(f=>`<td>${inp(`plano.mkt.mix.${x.k}.${f}`,{type:'area',rows:2})}</td>`).join('')}</tr>`}).join('')}</tbody></table></div></div>
+  <div class="grid2"><div class="panel"><h2>Metas e orçamento</h2><div class="form"><label>Orçamento de marketing deste ano (R$ mil)<input type="number" min="0" step="100" value="${+S.dec.prog.mkt||0}" data-k="dec.prog.mkt" data-n="1" data-r="1" id="mk_orc"></label></div><p class="small muted">É o mesmo valor do programa "Marketing e marca" em Decisões do ano: alterar aqui altera a decisão.</p><div class="row"><span>Custo das ações planejadas</span><b style="color:var(${acoesCusto()>(+S.dec.prog.mkt||0)?'--bad':'--ink'})">${mil(acoesCusto())}${acoesCusto()>(+S.dec.prog.mkt||0)?' · acima do orçamento':''}</b></div><div class="row"><span>Percentual da receita prevista</span><b>${pct((+S.dec.prog.mkt||0)/Math.max(p.dre.rb,1),2)}</b></div><div class="row"><span>Participação de mercado prevista</span><b>${pct(p.kpi.share)}</b></div><div class="row"><span>Satisfação prevista</span><b>${num(p.kpi.satisf)}/100</b></div>
    <label class="small muted" style="font-weight:700">Metas de marketing (participação, receita, novos mercados)${inp('plano.mkt.metas',{type:'area',rows:3})}</label></div>
-   <div class="panel"><h2>Ações de marketing</h2>${inp('plano.mkt.acoes',{type:'area',rows:6,ph:'Ação · canal · prazo · custo · indicador'})}</div></div>`;
+   <div class="panel"><h2>Indicadores de acompanhamento</h2><p class="small muted">Previsão da simulação para este ano.</p>${linhas.map(x=>`<div class="row"><span>${esc(x.nome)}</span><b>share ${pct(x.s)} · receita ${mil(x.rev||0)}</b></div>`).join('')}</div></div>
+  <div class="panel"><h2>Ações de marketing</h2><p class="small muted">Cada ação com linha de produto, canal, prazo, custo, indicador e meta. A soma dos custos é comparada ao orçamento.</p>
+   ${tabela('plano.mkt.lista',[{k:'acao',l:'Ação',w:200,t:'area'},{k:'linha',l:'Linha de produto',w:150,t:'sel',opts:[['','Todas'],...linhas.map(x=>[x.k,x.nome])]},{k:'canal',l:'Canal / mídia',w:140},{k:'quando',l:'Prazo',w:100},{k:'custo',l:'Custo (R$ mil)',n:1,step:10,min:0,r:1,wi:90},{k:'indicador',l:'Indicador',w:140},{k:'meta',l:'Meta',w:110}],'acaoMkt',{add:'Adicionar ação',num:1})}
+   ${M.acoes?`<label class="small muted" style="font-weight:700;display:block;margin-top:10px">Anotações anteriores${inp('plano.mkt.acoes',{type:'area',rows:3})}</label>`:''}</div>`;
 }
 function vPlanoRh(){
   const R=S.plano.rh=S.plano.rh||{},u=ult()||previa();R.comp=R.comp||[];
@@ -1044,8 +1073,8 @@ function Doc(){
   };
   return d;
 }
-async function gerarDocx(dd){
-  const P=S.plano,E=S.empresa,G=S.grupo,I=P.identidade,d=dd||Doc(),ano=new Date().getFullYear(),f=id=>S.fund[id]||{};
+async function gerarDocx(){
+  const P=S.plano,E=S.empresa,G=S.grupo,I=P.identidade,d=Doc(),ano=new Date().getFullYear(),f=id=>S.fund[id]||{};
   const teo=id=>{const x=f(id);if(x.teoria)d.p(x.teoria)},ana=id=>{const x=f(id);if(x.analise){d.p('Análise e interpretação',{b:1,noInd:1});d.p(x.analise)}if(x.implic){d.p('Implicações estratégicas',{b:1,noInd:1});d.p(x.implic)}};
   const ferr=(id,aplicar)=>{teo(id);aplicar();ana(id)};
   // capa
@@ -1077,7 +1106,7 @@ async function gerarDocx(dd){
   // 5
   d.h1('5 Formulação estratégica');
   d.h2('5.1 SWOT cruzada');ferr('tows',()=>d.quadro('SWOT cruzada',['Cruzamento','Fatores','Alternativa estratégica'],P.tows.map(x=>[TOWSQ[x.q][1],`${x.f||'—'} × ${x.o||'—'}`,x.est]),{w:[1900,3000,4170]}));
-  d.h2('5.2 Análise de portfólio');{const gCut=P.gCut??0.06,items=S.modo==='sim'?Object.values((ult()||previa()).P).map(x=>({nome:x.nome,g:x.g,rs:x.rs,rec:x.rev})):(P.port||[]).map(x=>({nome:x.nome,g:(+x.g||0)/100,rs:+x.rs||0.1,rec:+x.rec||1}));
+  d.h2('5.2 Análise de portfólio');{const gCut=P.gCut??0.06,items=bcgItens(bcgFonte());
     teo('bcg');d.img(await svgPng(bcgSVG(items,{gCut})),'Matriz BCG',14);d.quadro('Classificação do portfólio',['Produto','Crescimento','Part. relativa','Classificação'],items.map(i=>[i.nome,pct(i.g),num(i.rs,2)+'×',bcgClasse(i.g,i.rs,gCut)]),{w:[3570,1800,1800,1900]});
     const A=P.ansoff||{};d.quadro('Matriz de Ansoff',['Quadrante','Estratégias'],[['Penetração de mercado',A.pen],['Desenvolvimento de mercado',A.dm],['Desenvolvimento de produto',A.dp],['Diversificação',A.div]].filter(x=>x[1]),{w:[2800,6270]});ana('bcg')}
   d.h2('5.3 Estratégias competitivas');ferr('competitiva',()=>{d.quadro('Aderência das estratégias competitivas',['Posicionamento','Aderência','Fundamentação'],COMPET.map(([k,n])=>[n,String((P.competitiva[k]||{}).n||''),(P.competitiva[k]||{}).j||'']),{w:[2400,1100,5570]});if(P.competitiva.declaracao)d.p(P.competitiva.declaracao)});
@@ -1094,6 +1123,7 @@ async function gerarDocx(dd){
   d.h2('6.5 Plano de ação 5W2H');ferr('w2h',()=>d.quadro('Plano de ação 5W2H',['O quê','Por quê','Onde','Quando','Quem','Como','Quanto (R$ mil)'],P.w2h.map(x=>[x.what,x.why,x.where,x.when,x.who,x.how,num(+x.much||0)]),{w:[1600,1400,1000,1000,1100,1870,1100]}));
   d.h2('6.6 Planos funcionais');const M=P.mkt||{},R=P.rh||{},PR=P.prod||{},FN=P.fin||{};
   d.h3('Plano de marketing');[['Análise de mercado',M.analise],['Segmentação',M.segmentos],['Público-alvo',M.publico],['Posicionamento',M.posicionamento],['Metas',M.metas],['Ações',M.acoes]].forEach(([l,t])=>d.lab(l,t));
+  if((M.lista||[]).length)d.quadro('Ações de marketing',['Ação','Linha','Canal','Prazo','Custo (R$ mil)','Indicador','Meta'],M.lista.map(x=>[x.acao,x.linha?((S.sim.prod[x.linha]||{}).nome||x.linha):'Todas',x.canal,x.quando,num(+x.custo||0),x.indicador,x.meta]),{w:[1900,1200,1100,900,900,1500,1570]});
   {const mix=Object.entries(M.mix||{}).filter(([k,v])=>v&&(v.produto||v.preco||v.praca||v.promocao));if(mix.length)d.quadro('Composto de marketing por linha',['Linha','Produto','Preço','Praça','Promoção'],mix.map(([k,v])=>[(S.sim.prod[k]||{}).nome||k,v.produto,v.preco,v.praca,v.promocao]),{w:[1500,1900,1900,1900,1870]})}
   d.h3('Plano de gestão de pessoas');[['Estrutura e quadro',R.estrutura],['Recrutamento e seleção',R.recrut],['Treinamento e desenvolvimento',R.treino],['Remuneração',R.remun],['Clima e retenção',R.clima],['Saúde e segurança',R.sst],['Indicadores',R.indicadores]].forEach(([l,t])=>d.lab(l,t));
   if((R.comp||[]).length)d.quadro('Competências críticas',['Competência','Área','Atual','Desejado','Ação'],R.comp.map(x=>[x.comp,x.area,String(x.atual||''),String(x.desej||''),x.acao]),{w:[2200,1300,900,1000,3670]});
@@ -1114,66 +1144,18 @@ async function salvarBlob(nome,blob){
   if(window.claude&&typeof window.claude.use==='function'){let dl=null;try{dl=await claude.use('downloads')}catch(e){}if(dl){try{await dl.save({filename:nome,data:blob});toast('Arquivo salvo.')}catch(e){}return}}
   try{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=nome;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);toast(`Arquivo ${nome} baixado.`)}catch(e){toast('Não foi possível baixar o arquivo neste navegador.',true)}
 }
-/* ====================== exportação em PDF (mesmo conteúdo do .docx) ====================== */
-function nomeArquivoPlano(){return `plano-estrategico-${(S.empresa.nome||'agroindustria').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Za-z0-9]+/g,'-').toLowerCase()}`}
-function DocHTML(titulo){
-  const body=[],heads=[];let nQ=0,nF=0,nH=0;const e=xe;
-  const hx=(n,t)=>{const id='sec'+(++nH);heads.push([n,t]);body.push(`<h${n} id="${id}">${e(t)}</h${n}>`)};
-  const d={
-    p(t,o={}){String(t??'').split(/\n+/).forEach(l=>{if(!l.trim()&&!o.keep)return;const c=[o.style==='Capa'?'capa':'',o.noInd?'ni':'',o.b?'b':'',o.i?'i':'',o.jc==='center'?'ctr':''].filter(Boolean).join(' ');body.push(`<p class="${c}"${o.sp!=null?' style="margin:6pt 0"':''}>${o.label?`<b>${e(o.label)}</b>`:''}${e(l)}</p>`)})},
-    lab(l,t){if(!String(t||'').trim())return;body.push(`<p class="ni"><b>${e(l)}:</b> ${e(t).replace(/\n/g,'<br>')}</p>`)},
-    h1(t){hx(1,t)},h2(t){hx(2,t)},h3(t){hx(3,t)},
-    brk(){body.push('<div class="pb"></div>')},
-    blank(n=1){for(let i=0;i<n;i++)body.push('<p class="ni">&nbsp;</p>')},
-    toc(){body.push('<!--SUMARIO-->')},
-    caption(tipo,t){const n=tipo==='Figura'?++nF:++nQ;body.push(`<p class="leg">${tipo} ${n} – ${e(t)}</p>`)},
-    fonte(t){body.push(`<p class="fonte">Fonte: ${e(t||'Elaborado pelos autores ('+new Date().getFullYear()+').')}</p>`)},
-    table(head,rows,o={}){if(!rows.length)return;const ws=o.w||head.map(()=>1),tot=ws.reduce((a,b)=>a+b,0);
-      const cell=(t,tag)=>`<${tag}>${String(t??'').split('\n').map(e).join('<br>')}</${tag}>`;
-      body.push(`<table><colgroup>${ws.map(w=>`<col style="width:${(100*w/tot).toFixed(1)}%">`).join('')}</colgroup><thead><tr>${head.map(h=>cell(h,'th')).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>cell(c,'td')).join('')}</tr>`).join('')}</tbody></table>`)},
-    quadro(titulo,head,rows,o){if(!rows.length)return;d.caption('Quadro',titulo);d.table(head,rows,o);d.fonte()},
-    img(png,titulo,maxCm=15.5){if(!png)return;const cm=Math.min(maxCm,png.w/40),b=png.data;let s='';for(let i=0;i<b.length;i+=0x8000)s+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000));
-      d.caption('Figura',titulo);body.push(`<p class="fig"><img alt="${e(titulo)}" src="data:image/png;base64,${btoa(s)}" style="width:${cm.toFixed(2)}cm"></p>`);d.fonte()},
-    build(){
-      const sum=`<p class="capa">SUMÁRIO</p>`+heads.map(([n,t])=>`<p class="toc t${n}">${e(t)}</p>`).join('');
-      const css=`@page{size:A4;margin:3cm 2cm 2cm 3cm;@top-right{content:counter(page);font:10pt Arial,sans-serif}}@page:first{@top-right{content:none}}
-*{box-sizing:border-box}html,body{background:#fff}body{margin:0;color:#000;font:12pt/1.5 Arial,Helvetica,sans-serif}
-p{margin:0;text-align:justify;text-indent:1.25cm;orphans:2;widows:2}p.ni,p.capa,p.leg,p.fonte,p.fig,p.toc{text-indent:0}
-p.capa{text-align:center;font-weight:bold;text-transform:uppercase}p.ctr{text-align:center}.b{font-weight:bold}.i{font-style:italic}
-h1,h2,h3{font-size:12pt;line-height:1.5;break-after:avoid;page-break-after:avoid}h1{text-transform:uppercase;margin:18pt 0 12pt}h2{margin:12pt 0 6pt}h3{font-style:italic;font-weight:normal;margin:10pt 0 4pt}
-.pb{break-after:page;page-break-after:always}
-p.leg{text-align:center;font-size:10pt;line-height:1.2;margin-top:12pt;break-after:avoid;page-break-after:avoid}p.fonte{text-align:left;font-size:10pt;line-height:1.2;margin:3pt 0 12pt}
-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:9pt;line-height:1.2}th,td{border:1px solid #808080;padding:2pt 4pt;vertical-align:top;text-align:left;overflow-wrap:anywhere}
-th{background:#DCE5EE;-webkit-print-color-adjust:exact;print-color-adjust:exact}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}
-p.fig{text-align:center;break-inside:avoid}img{max-width:100%}p.toc{text-align:left}p.toc.t2{padding-left:1cm}p.toc.t3{padding-left:2cm}`;
-      return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${e(titulo)}</title><style>${css}</style></head><body>${body.join('').replace('<!--SUMARIO-->',sum)}</body></html>`;
-    }
-  };
-  return d;
-}
-async function gerarPdf(){
-  const nome=nomeArquivoPlano(),html=await gerarDocx(DocHTML(nome));
-  const fr=document.createElement('iframe');fr.setAttribute('aria-hidden','true');fr.setAttribute('tabindex','-1');
-  fr.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
-  document.body.appendChild(fr);
-  await new Promise(r=>{fr.onload=r;fr.srcdoc=html});
-  await Promise.all([...fr.contentDocument.images].map(i=>i.complete?0:new Promise(r=>{i.onload=i.onerror=r})));
-  const t0=document.title;document.title=nome;
-  toast('Na janela que abrir, em Destino, escolha "Salvar como PDF".');
-  try{fr.contentWindow.focus();fr.contentWindow.print()}finally{setTimeout(()=>{document.title=t0;fr.remove()},1500)}
-}
 /* ====================== relatório, glossário, navegação ====================== */
 const REFS_SUG=['ANSOFF, H. I. Estratégia empresarial. São Paulo: McGraw-Hill, 1977.','BARNEY, J. B.; HESTERLY, W. S. Administração estratégica e vantagem competitiva. São Paulo: Pearson Prentice Hall, 2007.','BATALHA, M. O. (coord.). Gestão agroindustrial. 3. ed. São Paulo: Atlas, 2007. v. 1.','KAPLAN, R. S.; NORTON, D. P. A estratégia em ação: balanced scorecard. Rio de Janeiro: Campus, 1997.','KAPLAN, R. S.; NORTON, D. P. Mapas estratégicos: convertendo ativos intangíveis em resultados tangíveis. Rio de Janeiro: Elsevier, 2004.','MINTZBERG, H.; AHLSTRAND, B.; LAMPEL, J. Safári de estratégia: um roteiro pela selva do planejamento estratégico. Porto Alegre: Bookman, 2000.','OLIVEIRA, D. P. R. Planejamento estratégico: conceitos, metodologia e práticas. São Paulo: Atlas.','PORTER, M. E. Estratégia competitiva: técnicas para análise de indústrias e da concorrência. Rio de Janeiro: Campus, 1986.','PORTER, M. E. Vantagem competitiva: criando e sustentando um desempenho superior. Rio de Janeiro: Campus, 1989.','SLACK, N.; BRANDON-JONES, A.; JOHNSTON, R. Administração da produção. São Paulo: Atlas.','ZYLBERSZTAJN, D.; NEVES, M. F. (org.). Economia e gestão dos negócios agroalimentares. São Paulo: Pioneira, 2000.'];
 function vRelatorio(){
   const prog=progressoPlano();
-  return head('Entrega','Relatório do plano estratégico (Word e PDF)','Gera o documento em Word ou em PDF na estrutura do item 7 do projeto: capa, folha de rosto, sumário, introdução, caracterização, fundamentação, diagnóstico, formulação, implementação, planos funcionais, controle, considerações finais e referências. Quadros e figuras saem numerados, com fonte.')+
+  return head('Entrega','Relatório do plano estratégico (.docx)','Gera o documento em Word na estrutura do item 7 do projeto: capa, folha de rosto, sumário, introdução, caracterização, fundamentação, diagnóstico, formulação, implementação, planos funcionais, controle, considerações finais e referências. Quadros e figuras saem numerados, com fonte.')+
   `<div class="kpis">${prog.map(x=>`<div class="kpi"><span>${x.n}</span><b>${pct(x.p,0)}</b>${meter(x.p,1,x.p>=0.8?'good':x.p>=0.4?'warn':'bad')}</div>`).join('')}</div>
   <div class="panel"><div class="fields"><label class="wide">Introdução${inp('plano.intro',{type:'area',rows:6,ph:'Contexto da agroindústria e do setor, problema, objetivo do trabalho, método e estrutura do documento.'})}</label>
   <label class="wide">Considerações finais${inp('plano.conclusao',{type:'area',rows:6,ph:'Síntese do plano, principais escolhas, limitações e recomendações.'})}</label>
   <label class="wide">Referências (uma por linha, em ordem alfabética, ABNT NBR 6023)${inp('plano.refs',{type:'area',rows:8})}</label></div>
   <div class="form"><button class="btn" type="button" data-act="refsSug">Inserir referências clássicas sugeridas</button><span class="small muted" style="padding-bottom:8px">Confira a edição disponível na biblioteca e complete com artigos e fontes do setor.</span></div></div>
-  <div class="panel soft"><h2>Gerar o documento</h2><p class="sub">O arquivo usa Arial 12, espaçamento 1,5, margens de 3 cm (superior e esquerda) e 2 cm (inferior e direita) e numeração de página. Ao abrir no Word, aceite atualizar os campos para montar o sumário. O PDF sai pronto para entrega: na janela de impressão, escolha <b>Salvar como PDF</b> em Destino. Revise a formatação final conforme a ABNT vigente.</p>
-  <div class="form"><button class="btn pri" type="button" data-act="docx" id="btnDocx">Baixar o plano em Word (.docx)</button><button class="btn pri" type="button" data-act="pdf" id="btnPdf">Salvar o plano em PDF</button><button class="btn" type="button" data-act="baixarJson">Baixar arquivo do grupo (.json)</button></div></div>`;
+  <div class="panel soft"><h2>Gerar o documento</h2><p class="sub">O arquivo usa Arial 12, espaçamento 1,5, margens de 3 cm (superior e esquerda) e 2 cm (inferior e direita) e numeração de página. Ao abrir no Word, aceite atualizar os campos para montar o sumário. Revise a formatação final conforme a ABNT vigente.</p>
+  <div class="form"><button class="btn pri" type="button" data-act="docx" id="btnDocx">Baixar o plano em Word (.docx)</button><button class="btn" type="button" data-act="baixarJson">Baixar arquivo do grupo (.json)</button></div></div>`;
 }
 const GLOS=[['Planejamento estratégico','Processo de definir a direção de longo prazo da organização, considerando ambiente externo e capacidades internas, e de desdobrá-la em objetivos, metas e ações.'],['Níveis de planejamento','Estratégico (organização como um todo, longo prazo), tático (áreas funcionais, médio prazo) e operacional (atividades, curto prazo).'],['Sistema agroindustrial','Conjunto de agentes e atividades antes, dentro e depois da porteira: insumos, produção rural, agroindústria, distribuição e consumo.'],['EBITDA','Lucro antes de juros, impostos, depreciação e amortização: mede a geração de caixa operacional.'],['ROE e ROIC','Retorno sobre o patrimônio líquido e retorno sobre o capital investido (próprio e de terceiros).'],['Dívida líquida / EBITDA','Quantos anos de geração de caixa operacional seriam necessários para pagar a dívida líquida.'],['VPL e TIR','Valor presente líquido dos fluxos de caixa de um projeto e taxa interna de retorno que zera o VPL.'],['OEE','Eficiência global dos equipamentos: disponibilidade × desempenho × qualidade.'],['Margem de contribuição por litro','Margem gerada por litro de leite usado em cada linha; orienta a alocação quando o leite é a restrição.'],['Coproduto','Produto gerado junto com o principal no mesmo processo, como o soro na fabricação de queijo.'],['FCO','Fundo Constitucional de Financiamento do Centro-Oeste: linhas de crédito de longo prazo para investimentos produtivos.'],['ESG','Práticas ambientais, sociais e de governança avaliadas por investidores, bancos e clientes.'],['PDCA','Ciclo de melhoria contínua: planejar, executar, verificar e agir.']];
 function vGlossario(){
@@ -1189,7 +1171,7 @@ const NAV=[
   ['Parte I · Formulação','23/10',[['tows','SWOT cruzada'],['portfolio','BCG e Ansoff'],['competitiva','Estratégia competitiva'],['producao','Estratégia de produção'],['objetivos','Objetivos estratégicos'],['gut','Matriz GUT']]],
   ['Parte II · Implementação','27/11',[['bsc','Balanced Scorecard'],['mapa','Mapa estratégico'],['kpis','Indicadores (KPIs)'],['smart','Metas SMART'],['w2h','Plano de ação 5W2H'],['controle','Controle e riscos']]],
   ['Planos funcionais','tático',[['planoMkt','Plano de marketing'],['planoRh','Plano de pessoas (RH)'],['planoProd','Plano de produção'],['planoFin','Plano financeiro']]],
-  ['Entrega','',[['relatorio','Relatório (Word e PDF)'],['glossario','Referências e glossário']]]
+  ['Entrega','',[['relatorio','Relatório em Word'],['glossario','Referências e glossário']]]
 ];
 const VIEWS={painel:vPainel,projeto:vProjeto,integrado:vIntegrado,decisoes:vDecisoes,mercados:vMercados,suprimento:vSuprimento,investimentos:vInvestimentos,financas:vFinancas,cenario:vCenario,caracterizacao:vCaracterizacao,identidade:vIdentidade,pestel:vPestel,porter:vPorter,interno:vInterno,swot:vSwot,tows:vTows,portfolio:vPortfolio,competitiva:vCompetitiva,producao:vProducao,objetivos:vObjetivos,gut:vGut,bsc:vBsc,mapa:vMapa,kpis:vKpis,smart:vSmart,w2h:vW2h,controle:vControle,planoMkt:vPlanoMkt,planoRh:vPlanoRh,planoProd:vPlanoProd,planoFin:vPlanoFin,relatorio:vRelatorio,glossario:vGlossario};
 function feito(v){const P=S.plano,F=id=>!!(S.fund[id]&&(S.fund[id].teoria||'').trim().length>40);
@@ -1259,11 +1241,16 @@ const A={
   modo(b){if(b.dataset.v==='real'&&S.modo!=='real'){const v={};for(const k in S.empresa)v[k]='';S.empresaSim=S.empresaSim||S.empresa;S.empresa=v;S.plano.fluxo=[]}if(b.dataset.v==='sim'&&S.modo!=='sim'&&S.empresaSim){S.empresa=S.empresaSim}S.modo=b.dataset.v;save();render();toast(S.modo==='real'?'Modo agroindústria real: preencha a caracterização com os dados do grupo.':'Modo caso simulado.')},
   verPrevia(b){S._verPrevia=b.dataset.v==='1';render()},
   refsSug(){const ex=(S.plano.refs||'').split('\n').map(s=>s.trim()).filter(Boolean);REFS_SUG.forEach(r=>{if(!ex.includes(r))ex.push(r)});S.plano.refs=ex.sort((a,b)=>a.localeCompare(b,'pt-BR')).join('\n');save();render()},
-  async pdf(b){const tx=b.textContent;b.disabled=true;b.textContent='Preparando…';try{await gerarPdf()}catch(e){console.error(e);toast('Não foi possível preparar o PDF.',true)}b.disabled=false;b.textContent=tx},
   async docx(b){b.disabled=true;b.textContent='Gerando…';try{const blob=await gerarDocx();const nome=`plano-estrategico-${(S.empresa.nome||'agroindustria').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Za-z0-9]+/g,'-').toLowerCase()}.docx`;window._ultimoDocx=blob;await salvarBlob(nome,blob)}catch(e){console.error(e);toast('Não foi possível gerar o documento.',true)}b.disabled=false;b.textContent='Baixar o plano em Word (.docx)'},
   baixarJson(){const nome=`agroestrategia-${(S.grupo.nome||'grupo').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Za-z0-9]+/g,'-').toLowerCase()}-ano-${S.ano}.json`;salvarBlob(nome,new Blob([JSON.stringify(S)],{type:'application/json'}))},
   abrirJson(){const i=$('#arq');if(i)i.click()},
   reset(b){if(!resetArmado){resetArmado=true;b.textContent='Confirmar: apagar tudo';setTimeout(()=>{resetArmado=false;render()},5000);return}resetArmado=false;S=seed();save();_prevKey='';go('painel');toast('Novo início: ano 1.')},
+  portToggle(){S._portAberto=!S._portAberto;render()},
+  portAdd(){const id='p'+Date.now().toString(36);S.sim.prod[id]={...PROD_NOVO,s:PROD_NOVO.share,base:PROD_NOVO.share,status:'ativo',pend:0,ramp:1};S.dec.preco[id]=0;S._portAberto=true;save();_prevKey='';render();toast('Produto incluído no portfólio. Ajuste nome, mercado, participação e custos.')},
+  portDel(b){const k=b.dataset.k,ativos=Object.keys(S.sim.prod).filter(x=>S.sim.prod[x].status==='ativo');if(ativos.length<=1&&S.sim.prod[k].status==='ativo')return toast('O portfólio precisa de pelo menos um produto ativo.',true);const nome=S.sim.prod[k].nome;if(NOVOS[k]){S.sim.prod[k].status='removido';if(S.sim.novos[k])S.sim.novos[k].status='nao'}else delete S.sim.prod[k];delete S.dec.preco[k];if(S.dec.expand)delete S.dec.expand[k];S._portAberto=true;save();_prevKey='';render();toast(`${nome} saiu do portfólio.`)},
+  portReset(b){if(!b.dataset.ok){b.dataset.ok='1';b.textContent='Confirmar: restaurar os 4 produtos originais';setTimeout(()=>{delete b.dataset.ok;render()},5000);return}
+    const prod={};for(const k in PROD0)prod[k]={...PROD0[k],s:PROD0[k].share,base:PROD0[k].share,status:'ativo',pend:0,ramp:1};for(const k in S.sim.prod)if(NOVOS[k]&&S.sim.prod[k].status==='ativo')prod[k]=S.sim.prod[k];S.sim.prod=prod;const pr={};for(const k in prod)pr[k]=S.dec.preco[k]||0;S.dec.preco=pr;S._portAberto=true;save();_prevKey='';render();toast('Portfólio original restaurado.')},
+  portCopiar(){const P=previa().P;S.plano.port=Object.values(ult()?ult().P:P).map(x=>({nome:x.nome,g:r1(x.g*100),rs:Math.round(x.rs*100)/100,rec:Math.round(x.rev)}));save();render();toast('Produtos copiados. Agora o grupo pode editar os dados.')},
   preFechar(){abrirPreFechar()},fechar(){fecharAno()},fecharModal(){$('#modal').hidden=true;$('#modal').innerHTML='';render()}
 };
 TPL.rhcomp=()=>({comp:'',area:'',atual:2,desej:4,acao:''});
@@ -1272,7 +1259,7 @@ let tSave;
 function valorDe(t){if(t.type==='checkbox')return t.checked;let v=t.value;if(t.dataset.pct)return (parseFloat(String(v).replace(',','.'))||0)/100;if(t.dataset.n||t.type==='number')return parseFloat(String(v).replace(',','.'))||0;return v}
 document.addEventListener('input',e=>{const t=e.target;if(t.dataset.k){setP(S,t.dataset.k,valorDe(t));clearTimeout(tSave);tSave=setTimeout(save,350);if(t.type==='range'){const o=t.parentElement.querySelector('output');if(o)o.textContent=(t.value>0?'+':'')+t.value+'%'}}});
 document.addEventListener('change',e=>{const t=e.target;
-  if(t.dataset.k){setP(S,t.dataset.k,valorDe(t));if(t.dataset.k==='empresa.nome')$('#brandName').textContent=t.value;save();if(t.dataset.r)render()}
+  if(t.dataset.k){setP(S,t.dataset.k,valorDe(t));if(t.dataset.k==='empresa.nome')$('#brandName').textContent=t.value;{const m=t.dataset.k.match(/^sim\.prod\.([^.]+)\.s$/);if(m){S.sim.prod[m[1]].base=S.sim.prod[m[1]].s;S.sim.prod[m[1]].share=S.sim.prod[m[1]].s}if(/^sim\.prod\./.test(t.dataset.k)){_prevKey='';S._portAberto=true}}save();if(t.dataset.r)render()}
   if(t.dataset.causa!=null){const o=S.plano.bsc[+t.dataset.causa];o.causa=o.causa||[];if(t.checked){if(!o.causa.includes(t.dataset.t))o.causa.push(t.dataset.t)}else o.causa=o.causa.filter(x=>x!==t.dataset.t);save();render()}
   if(t.id==='arq'&&t.files&&t.files[0]){const rd=new FileReader();rd.onload=()=>{try{const o=JSON.parse(rd.result);if(!o||o.app!=='agroestrategia')throw 0;S=migrar(o);save();_prevKey='';render();toast('Arquivo do grupo aberto.')}catch(err){toast('Este arquivo não é do AgroEstratégia.',true)}};rd.readAsText(t.files[0])}
 });
