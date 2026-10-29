@@ -479,7 +479,7 @@ const NAV=[
   ['Visão geral',[['painel','Painel'],['reuniao','Reunião do mês'],['plano','Plano de negócio'],['marca','Marca']]],
   ['Operação',[['produtos','Cardápio e preços'],['pcp','PCP: planejamento'],['compras','Compras e estoque'],['producao','Cozinha e produção'],['vendas','Vendas e encomendas'],['canais','Canais e delivery']]],
   ['Gestão',[['mercado','Marketing'],['financeiro','Financeiro'],['pessoas','Pessoas e estrutura'],['relatorios','Relatórios']]],
-  ['Aprender',[['missoes','Missões e glossário']]]
+  ['Aprender',[['caso','Estudo de caso: custos da pizza'],['missoes','Missões e glossário']]]
 ];
 
 /* ====================== estado ====================== */
@@ -506,6 +506,7 @@ function seed(){
 function migrar(o){
   o.mkt=o.mkt||MKT0();o.pcp=o.pcp||{};o.demHist=o.demHist||{};o.mktHist=o.mktHist||[];
   o.canal=Object.assign({delivery:true,taxa:6,app:false,markup:0},o.canal||{});
+  if(!o.caso)o.caso=JSON.parse(JSON.stringify(CASO0));
   o.rodizio=Object.assign({ativo:false,frios:false,preco:49.9},o.rodizio||{});
   if(o.fornos==null)o.fornos=1;o.imob=o.imob||{valor:0,dep:0};if(o.fornoUsado==null)o.fornoUsado=0;if(o.prepSS==null)o.prepSS=10;
   INSUMOS0.forEach(i=>{if(!o.insumos.some(x=>x.id===i.id))o.insumos.push({...i,ficha:i.ficha?{...i.ficha}:undefined,estoque:0,cm:0})});
@@ -1069,6 +1070,7 @@ const A={
     S.divida=r2(S.divida+v);mov('e','Empréstimos','Empréstimo bancário',v);save();render();toast(`Empréstimo de ${brl(v)} creditado. Juros de ${pct(JUROS)} ao mês sobre a dívida.`)},
   amortizar(){let v=nval('amo_v');if(!(v>0))return toast('Informe o valor.',true);v=Math.min(v,S.divida);if(v>S.caixa)return toast('Caixa insuficiente para amortizar esse valor.',true);
     S.divida=r2(S.divida-v);mov('s','Empréstimos','Amortização do empréstimo',v);save();render();toast(`Dívida reduzida em ${brl(v)}.`)},
+  casoReset(b){if(!b.dataset.ok){b.dataset.ok='1';b.textContent='Confirmar: restaurar os valores';setTimeout(()=>{delete b.dataset.ok;render()},5000);return}S.caso=JSON.parse(JSON.stringify(CASO0));save();render();toast('Valores do estudo de caso restaurados.')},
   preFechar(){abrirPreFechar()},
   reuniaoPdf(){_imprimir(reuniaoHTML())},
   abrirReuniao(){go('reuniao')},
@@ -1473,6 +1475,130 @@ async function baixarTexto(nome,data,mime){
 }
 const CANVAS_ROT=[['segmentos','Segmentos de clientes'],['proposta','Proposta de valor'],['canais','Canais'],['relacionamento','Relacionamento'],['receitas','Fontes de receita'],['recursos','Recursos principais'],['atividades','Atividades-chave'],['parcerias','Parcerias principais'],['custos','Estrutura de custos']];
 function _missoesOk(){return MISSOES.map(m=>{let ok=false;try{ok=!!m.ok()}catch(e){}return [m,ok]})}
+
+
+/* ====================== estudo de caso: custos da pizza ====================== */
+const CASO0={
+ sabores:[
+  {nome:'Calabresa',qtd:2,preco:55,desc:'Calabresa, cebola e azeitona sobre mussarela',cob:[{n:'Calabresa',q:150,u:'g',p:18.99},{n:'Cebola',q:80,u:'g',p:11.79},{n:'Azeitona',q:30,u:'g',p:56.90}]},
+  {nome:'Portuguesa',qtd:2,preco:60,desc:'Presunto, ovo, ervilha, cebola e azeitona',cob:[{n:'Presunto',q:120,u:'g',p:43.85},{n:'Ovos',q:2,u:'un',p:0.80},{n:'Ervilha',q:50,u:'g',p:17},{n:'Cebola',q:60,u:'g',p:11.79},{n:'Azeitona',q:30,u:'g',p:56.90}]},
+  {nome:'Presunto',qtd:2,preco:55,desc:'Presunto e tomate sobre mussarela',cob:[{n:'Presunto',q:200,u:'g',p:43.85},{n:'Tomate',q:80,u:'g',p:16.99}]}],
+ massa:[{n:'Farinha de trigo',q:250,u:'g',p:5.39},{n:'Água',q:150,u:'ml',p:0},{n:'Fermento seco',q:3,u:'g',p:199},{n:'Açúcar',q:5,u:'g',p:5},{n:'Sal',q:5,u:'g',p:3},{n:'Óleo de soja',q:15,u:'ml',p:8.21}],
+ base:[{n:'Molho de tomate',q:120,u:'g',p:8.97},{n:'Mussarela',q:250,u:'g',p:47.95},{n:'Orégano',q:1,u:'g',p:60}],
+ mo:{salario:2800,horas:220,minPizza:20},emb:6,cartao:3,
+ gas:{botijao:127.74,kg:13,consumo:0.38,preaq:20,minFornada:12,porFornada:1},
+ fixos:[{n:'Aluguel do ponto',v:1500},{n:'Energia elétrica e água',v:400},{n:'Manutenção e limpeza',v:300},{n:'Internet e telefone',v:150},{n:'Contabilidade / MEI',v:150}],
+ dep:{inv:9840,meses:120},dias:26,porDia:6,pizzaioloFixo:false
+};
+const casoCusto=it=>it.u==='un'?it.q*it.p:it.q/1000*it.p;
+const casoUnP=it=>it.u==='un'?'R$/un':it.u==='ml'?'R$/L':'R$/kg';
+function casoCalc(C){
+  const N=C.sabores.reduce((a,x)=>a+(+x.qtd||0),0)||1;
+  const massa=C.massa.reduce((a,i)=>a+casoCusto(i),0),molhoEtc=C.base.reduce((a,i)=>a+casoCusto(i),0),base=massa+molhoEtc;
+  const g=C.gas,fornadas=Math.ceil(N/Math.max(1,g.porFornada)),minGas=g.preaq+fornadas*g.minFornada,kgGas=minGas/60*g.consumo,precoKg=g.botijao/Math.max(g.kg,0.01),gasTot=kgGas*precoKg,gasP=gasTot/N;
+  const vh=C.mo.salario/Math.max(C.mo.horas,1),moP=C.pizzaioloFixo?0:C.mo.minPizza/60*vh;
+  const S1=C.sabores.map(x=>{const cob=x.cob.reduce((a,i)=>a+casoCusto(i),0),ingr=base+cob,cart=x.preco*C.cartao/100,cv=ingr+moP+C.emb+gasP+cart,mc=x.preco-cv;return {...x,cobC:cob,ingr,cart,cv,mc,mcp:x.preco?mc/x.preco:0}});
+  const depV=C.dep.inv/Math.max(C.dep.meses,1),cf=C.fixos.reduce((a,f)=>a+f.v,0)+depV+(C.pizzaioloFixo?C.mo.salario:0);
+  const pv=S1.reduce((a,x)=>a+x.qtd*x.preco,0)/N,cvm=S1.reduce((a,x)=>a+x.qtd*x.cv,0)/N,mcm=pv-cvm,mcp=pv?mcm/pv:0;
+  const pe=mcm>0?cf/mcm:Infinity,peR=mcp>0?cf/mcp:Infinity;
+  const rec=S1.reduce((a,x)=>a+x.qtd*x.preco,0),cvT=S1.reduce((a,x)=>a+x.qtd*x.cv,0);
+  const lista={};const add=(i,m)=>{const k=i.n;lista[k]=lista[k]||{n:k,u:i.u,q:0,c:0};lista[k].q+=i.q*m;lista[k].c+=casoCusto(i)*m};
+  C.massa.forEach(i=>add(i,N));C.base.forEach(i=>add(i,N));C.sabores.forEach(x=>x.cob.forEach(i=>add(i,x.qtd)));
+  const L=Object.values(lista).filter(x=>x.c>0).sort((a,b)=>b.c-a.c),totL=L.reduce((a,x)=>a+x.c,0);
+  // alternativa com pizzaiolo em salário fixo (ou por hora)
+  const altFixo=!C.pizzaioloFixo,moAlt=altFixo?0:C.mo.minPizza/60*vh,cfAlt=cf+(altFixo?C.mo.salario:-C.mo.salario),cvmAlt=cvm-moP+moAlt,peAlt=(pv-cvmAlt)>0?cfAlt/(pv-cvmAlt):Infinity;
+  return {N,massa,molhoEtc,base,fornadas,minGas,kgGas,precoKg,gasTot,gasP,vh,moP,S:S1,depV,cf,pv,cvm,mcm,mcp,pe,peR,rec,cvT,L,totL,peAlt,altFixo};
+}
+function vCaso(){
+  const C=S.caso=S.caso||JSON.parse(JSON.stringify(CASO0)),R=casoCalc(C);
+  const ni=(path,v,step,w)=>`<input type="number" data-caso="${path}" value="${v}" step="${step||0.01}" min="0" style="width:${w||80}px">`;
+  const tabIng=(arr,pfx,mult,lab)=>`<div class="tbl"><table><thead><tr><th>Ingrediente</th><th class="n">Por pizza</th><th class="n">${lab||'Pedido'}</th><th class="n">Preço</th><th class="n">Custo por pizza</th><th class="n">Custo ${lab?lab.toLowerCase():'pedido'}</th></tr></thead><tbody>
+    ${arr.map((i,k)=>`<tr><td>${esc(i.n)}</td><td class="n">${ni(`${pfx}.${k}.q`,i.q,1,70)} ${i.u}</td><td class="n">${num(r2(i.q*mult))} ${i.u}</td><td class="n">${ni(`${pfx}.${k}.p`,i.p,0.01,80)} <span class="small muted">${casoUnP(i)}</span></td><td class="n">${brl(casoCusto(i))}</td><td class="n">${brl(casoCusto(i)*mult)}</td></tr>`).join('')}
+    <tr class="tot"><td colspan="4"><b>Total</b></td><td class="n"><b>${brl(arr.reduce((a,i)=>a+casoCusto(i),0))}</b></td><td class="n"><b>${brl(arr.reduce((a,i)=>a+casoCusto(i),0)*mult)}</b></td></tr></tbody></table></div>`;
+  const pe=isFinite(R.pe)?Math.ceil(R.pe):null,menor=[...R.S].sort((a,b)=>a.mc-b.mc)[0],queijo=R.L.find(x=>/mussarela/i.test(x.n));
+  const comps=[['Ingredientes',R.S.reduce((a,x)=>a+x.ingr,0)/R.S.length],['Embalagem',C.emb],['Mão de obra',R.moP],['Taxa de cartão',R.S.reduce((a,x)=>a+x.cart,0)/R.S.length],['Gás do forno',R.gasP]].sort((a,b)=>b[1]-a[1]);
+  const posEmb=comps.findIndex(c=>c[0]==='Embalagem')+1;
+  // gráfico do ponto de equilíbrio
+  const xMax=Math.max(200,Math.ceil((pe||100)*1.6/50)*50),W=620,H=300,Lm=60,Rm=20,T=20,B=40,yMax=Math.max(R.pv*xMax,R.cf+R.cvm*xMax)*1.05;
+  const X=q=>Lm+q/xMax*(W-Lm-Rm),Y=v=>T+(1-v/yMax)*(H-T-B);
+  let svg=`<line x1="${Lm}" y1="${H-B}" x2="${W-Rm}" y2="${H-B}" stroke="var(--line)"/><line x1="${Lm}" y1="${T}" x2="${Lm}" y2="${H-B}" stroke="var(--line)"/>`;
+  [0,0.25,0.5,0.75,1].forEach(f=>{const q=Math.round(xMax*f);svg+=`<text x="${X(q)}" y="${H-B+16}" text-anchor="middle" font-size="11" fill="var(--muted)">${q}</text>`;const v=yMax*f;svg+=`<text x="${Lm-6}" y="${Y(v)+4}" text-anchor="end" font-size="11" fill="var(--muted)">${num(Math.round(v/100)/10,1)} mil</text>`});
+  svg+=`<line x1="${X(0)}" y1="${Y(R.cf)}" x2="${X(xMax)}" y2="${Y(R.cf)}" stroke="var(--muted)" stroke-dasharray="4 3"/><text x="${X(xMax)-4}" y="${Y(R.cf)-6}" text-anchor="end" font-size="11" fill="var(--muted)">Custos fixos ${brl(R.cf)}</text>`;
+  svg+=`<line x1="${X(0)}" y1="${Y(0)}" x2="${X(xMax)}" y2="${Y(R.pv*xMax)}" stroke="var(--good,#2f6b3b)" stroke-width="3"/><text x="${X(xMax*0.93)}" y="${Y(R.pv*xMax*0.93)-10}" text-anchor="end" font-size="12" font-weight="700" fill="var(--good,#2f6b3b)">Receita</text>`;
+  svg+=`<line x1="${X(0)}" y1="${Y(R.cf)}" x2="${X(xMax)}" y2="${Y(R.cf+R.cvm*xMax)}" stroke="var(--bad,#b5432f)" stroke-width="3"/><text x="${X(xMax*0.99)}" y="${Y(R.cf+R.cvm*xMax*0.99)+20}" text-anchor="end" font-size="12" font-weight="700" fill="var(--bad,#b5432f)">Custo total</text>`;
+  if(pe&&pe<=xMax)svg+=`<circle cx="${X(R.pe)}" cy="${Y(R.pv*R.pe)}" r="6" fill="var(--ink)"/><line x1="${X(R.pe)}" y1="${Y(R.pv*R.pe)}" x2="${X(R.pe)}" y2="${H-B}" stroke="var(--ink)" stroke-dasharray="3 3"/><text x="${X(R.pe)-10}" y="${Y(R.pv*R.pe)-14}" text-anchor="end" font-size="12" font-weight="700" fill="var(--ink)">PE: ${num(pe)} pizzas · ${brl(R.peR)}</text><text x="${X(R.pe*0.45)}" y="${H-B-10}" text-anchor="middle" font-size="12" fill="var(--bad,#b5432f)">Prejuízo</text><text x="${X(Math.min(xMax*0.92,R.pe*1.35))}" y="${H-B-10}" text-anchor="middle" font-size="12" fill="var(--good,#2f6b3b)">Lucro</text>`;
+  svg+=`<text x="${(Lm+W-Rm)/2}" y="${H-4}" text-anchor="middle" font-size="11" fill="var(--muted)">pizzas vendidas por mês</text>`;
+  const lucroMes=C.porDia*C.dias*R.mcm-R.cf;
+  return head('Aprender · estudo de caso','Produção de pizza: custos e ponto de equilíbrio','Projeto Empreende BB · Escola Estadual Deputado Renê Barbour · UNEMAT · Curso de Engenharia de Produção Agroindustrial · Prof. Dr. Ramão Humberto Martins Manvailer. Todos os campos são editáveis: altere preços e quantidades e veja os custos, a margem e o ponto de equilíbrio mudarem.')+
+  `<div class="form" style="margin-bottom:12px"><button class="btn sm ghost" type="button" data-act="casoReset">Restaurar os valores do estudo</button></div>
+  <div class="panel"><h2>1. O pedido</h2><div class="tbl"><table><thead><tr><th>Sabor</th><th>Cobertura</th><th class="n">Pizzas (35 cm · 8 fatias)</th><th class="n">Preço de venda</th><th class="n">Receita</th></tr></thead><tbody>
+   ${C.sabores.map((x,k)=>`<tr><td><b>${esc(x.nome)}</b></td><td class="small muted">${esc(x.desc)}</td><td class="n">${ni(`sabores.${k}.qtd`,x.qtd,1,60)}</td><td class="n">${ni(`sabores.${k}.preco`,x.preco,0.5,75)}</td><td class="n">${brl(x.qtd*x.preco)}</td></tr>`).join('')}
+   <tr class="tot"><td colspan="2"><b>Total</b></td><td class="n"><b>${num(R.N)} pizzas · ${num(R.N*8)} fatias</b></td><td></td><td class="n"><b>${brl(R.rec)}</b></td></tr></tbody></table></div></div>
+  <div class="panel"><h2>2. Processo produtivo</h2><ol class="list">
+   ${[['Mise en place','Separar, pesar e higienizar insumos e utensílios.'],['Produção da massa','Ativar o fermento com açúcar em água morna (≈ 35 °C, 10 min); misturar a farinha e o restante da água; juntar sal e óleo e sovar 10 min; porcionar em bolinhas de ≈ 430 g; fermentar 1h30 coberta, até dobrar de volume.'],['Abertura','Abrir os discos de 35 cm com as mãos ou rolo.'],['Montagem','Molho, mussarela, cobertura do sabor e orégano.'],['Forneamento',`Forno a gás a ≈ 250 °C, cerca de ${num(C.gas.minFornada)} min por fornada.`],['Finalização','Cortar em 8 fatias e conferir o padrão.'],['Expedição','Embalar na caixa e entregar ao cliente.']].map(([t,d],i)=>`<li><span class="dot todo">${i+1}</span><span style="flex:1"><b>${t}:</b> ${d}</span></li>`).join('')}</ol>
+   <p class="small muted">Cerca de 3h40 do início à última pizza (6 pizzas), com 2 h de trabalho ativo: durante a fermentação o pizzaiolo fica livre.</p></div>
+  <div class="panel"><h2>3. Ficha técnica da massa</h2>${tabIng(C.massa,'massa',R.N,'Lote')}<p class="small">Custo da massa por pizza: <b>${brl(R.massa)}</b>, cerca de ${pct(R.massa/R.S[0].ingr)} do custo dos ingredientes de uma pizza.</p></div>
+  <div class="panel"><h2>4. Molho, queijo e tempero (comum aos sabores)</h2>${tabIng(C.base,'base',R.N,'Lote')}
+   <div class="formula">Base da pizza = massa ${brl(R.massa)} + molho, mussarela e orégano ${brl(R.molhoEtc)} = <b>${brl(R.base)}</b> por pizza${queijo?` · a mussarela sozinha custa ${num(casoCusto(C.base.find(i=>/mussarela/i.test(i.n))||{q:0,p:0,u:'g'})/R.massa,1)} vezes a massa inteira`:''}</div></div>
+  <div class="panel"><h2>5. Coberturas por sabor</h2>
+   ${C.sabores.map((x,k)=>`<h3>${esc(x.nome)} <span class="small muted">· ${num(x.qtd)} pizza(s)</span></h3>${tabIng(x.cob,`sabores.${k}.cob`,x.qtd,'Pedido')}<div class="formula">Ingredientes por pizza = base ${brl(R.base)} + cobertura ${brl(R.S[k].cobC)} = <b>${brl(R.S[k].ingr)}</b></div>`).join('')}</div>
+  <div class="panel"><h2>6. Lista de compras do pedido</h2><div class="tbl"><table><thead><tr><th>Item</th><th class="n">Quantidade</th><th class="n">Custo</th><th class="n">% do total</th></tr></thead><tbody>
+   ${R.L.map(x=>`<tr><td>${esc(x.n)}</td><td class="n">${x.u==='un'?num(x.q)+' un':x.q>=1000?num(r2(x.q/1000))+(x.u==='ml'?' L':' kg'):num(x.q)+' '+x.u}</td><td class="n">${brl(x.c)}</td><td class="n">${pct(R.totL?x.c/R.totL:0)}</td></tr>`).join('')}
+   <tr class="tot"><td colspan="2"><b>Total de ingredientes</b></td><td class="n"><b>${brl(R.totL)}</b></td><td></td></tr></tbody></table></div>
+   <details style="margin-top:8px"><summary class="small" style="cursor:pointer;font-weight:700">Compra real em Barra do Bugres (Regional Supermercado Centro, nota nº 210691)</summary>
+   <div class="tbl"><table><thead><tr><th>Item</th><th class="n">Qtd.</th><th class="n">Preço</th><th class="n">Total</th></tr></thead><tbody>${[['Mussarela','0,842 kg','R$ 47,95/kg',40.37],['Presunto','0,422 kg','R$ 43,85/kg',18.50],['Calabresa','0,724 kg','R$ 18,99/kg',13.75],['Cebola','1,024 kg','R$ 11,79/kg',12.07],['Tomate','0,692 kg','R$ 16,99/kg',11.76],['Azeitona','2 un','R$ 5,69',11.38],['Milho verde','2 un','R$ 3,89',7.78],['Óleo de soja','1 un','R$ 7,39',7.39],['Farinha','1 un','R$ 5,39',5.39],['Molho','1 un','R$ 2,69',2.69],['Fermento','10 g','R$ 1,99',1.99]].map(([a,b,c,d])=>`<tr><td>${a}</td><td class="n">${b}</td><td class="n">${c}</td><td class="n">${brl(d)}</td></tr>`).join('')}<tr class="tot"><td colspan="3"><b>Itens das pizzas</b></td><td class="n"><b>${brl(133.07)}</b></td></tr></tbody></table></div><p class="small muted">Total da nota R$ 156,09; pães e mortadela (R$ 23,02) ficaram de fora. Ainda faltam mussarela, presunto, molho e fermento para completar as 6 pizzas, além de ovos, ervilha, orégano, sal e açúcar.</p></details></div>
+  <div class="grid2"><div class="panel"><h2>7. Gás do forno</h2>
+   <div class="form" style="flex-wrap:wrap"><label>Botijão P13 (R$)${ni('gas.botijao',C.gas.botijao,0.01,80)}</label><label>Consumo (kg/h)${ni('gas.consumo',C.gas.consumo,0.01,70)}</label><label>Pré-aquecimento (min)${ni('gas.preaq',C.gas.preaq,1,60)}</label><label>Minutos por fornada${ni('gas.minFornada',C.gas.minFornada,1,60)}</label><label>Pizzas por fornada${ni('gas.porFornada',C.gas.porFornada,1,60)}</label></div>
+   <div class="tbl"><table><tbody><tr><td>Preço do gás por kg (botijão ÷ ${num(C.gas.kg)} kg)</td><td class="n">${brl(R.precoKg)}/kg</td></tr><tr><td>Tempo de forno: ${num(C.gas.preaq)} min + ${num(R.fornadas)} × ${num(C.gas.minFornada)} min</td><td class="n">${num(Math.floor(R.minGas/60))} h ${num(R.minGas%60)} min</td></tr><tr><td>Gás consumido</td><td class="n">${num(r2(R.kgGas))} kg</td></tr><tr><td>Custo do gás do pedido</td><td class="n">${brl(R.gasTot)}</td></tr><tr class="tot"><td><b>Custo de assar por pizza</b></td><td class="n"><b>${brl(R.gasP)}</b></td></tr></tbody></table></div>
+   <p class="small muted">Cálculo conservador: chama no máximo o tempo todo, a ≈ 250 °C. Assar 2 pizzas por fornada reduz o custo por pizza.</p></div>
+   <div class="panel"><h2>8. Mão de obra</h2>
+   <div class="form" style="flex-wrap:wrap"><label>Remuneração mensal com encargos (R$)${ni('mo.salario',C.mo.salario,50,90)}</label><label>Horas por mês${ni('mo.horas',C.mo.horas,1,70)}</label><label>Minutos de trabalho por pizza${ni('mo.minPizza',C.mo.minPizza,1,60)}</label></div>
+   <label class="chipsel" style="margin:6px 0"><input type="checkbox" data-caso="pizzaioloFixo" ${C.pizzaioloFixo?'checked':''}> Pizzaiolo com salário fixo (custo fixo)</label>
+   <div class="tbl"><table><tbody><tr><td>Valor da hora (${brl(C.mo.salario)} ÷ ${num(C.mo.horas)} h)</td><td class="n">${brl(R.vh)}/h</td></tr><tr class="tot"><td><b>Mão de obra por pizza (${num(C.mo.minPizza)} min)</b></td><td class="n"><b>${C.pizzaioloFixo?'entra nos custos fixos':brl(R.moP)}</b></td></tr></tbody></table></div>
+   <p class="small muted">Pagando pelas horas trabalhadas (2 h ativas para 6 pizzas, ou 20 min por pizza), a mão de obra é custo variável. Com salário fixo, volta para os custos fixos.</p></div></div>
+  <div class="panel"><h2>9. Custos variáveis por pizza</h2>
+   <div class="form" style="flex-wrap:wrap"><label>Embalagem (R$ por pizza)${ni('emb',C.emb,0.1,70)}</label><label>Taxa de cartão (%)${ni('cartao',C.cartao,0.1,60)}</label></div>
+   <div class="tbl"><table><thead><tr><th>Componente</th>${R.S.map(x=>`<th class="n">${esc(x.nome)}</th>`).join('')}</tr></thead><tbody>
+   <tr><td>Ingredientes</td>${R.S.map(x=>`<td class="n">${brl(x.ingr)}</td>`).join('')}</tr>
+   <tr><td>Mão de obra (${num(C.mo.minPizza)} min)</td>${R.S.map(()=>`<td class="n">${C.pizzaioloFixo?'—':brl(R.moP)}</td>`).join('')}</tr>
+   <tr><td>Embalagem</td>${R.S.map(()=>`<td class="n">${brl(C.emb)}</td>`).join('')}</tr>
+   <tr><td>Gás do forno</td>${R.S.map(()=>`<td class="n">${brl(R.gasP)}</td>`).join('')}</tr>
+   <tr><td>Taxa de cartão (${num(C.cartao,1)}%)</td>${R.S.map(x=>`<td class="n">${brl(x.cart)}</td>`).join('')}</tr>
+   <tr class="tot"><td><b>Custo variável por pizza</b></td>${R.S.map(x=>`<td class="n"><b>${brl(x.cv)}</b></td>`).join('')}</tr>
+   <tr><td>Total do pedido · ${brl(R.cvT)}</td>${R.S.map(x=>`<td class="n">${brl(x.cv*x.qtd)}</td>`).join('')}</tr></tbody></table></div></div>
+  <div class="panel"><h2>10. Custos fixos mensais</h2><div class="tbl"><table><tbody>
+   ${C.fixos.map((f,k)=>`<tr><td>${esc(f.n)}</td><td class="n">${ni(`fixos.${k}.v`,f.v,10,90)}</td></tr>`).join('')}
+   <tr><td>Depreciação: investimento ${ni('dep.inv',C.dep.inv,10,90)} ÷ ${ni('dep.meses',C.dep.meses,1,60)} meses</td><td class="n">${brl(R.depV)}</td></tr>
+   ${C.pizzaioloFixo?`<tr><td>Pizzaiolo (salário fixo com encargos)</td><td class="n">${brl(C.mo.salario)}</td></tr>`:''}
+   <tr class="tot"><td><b>Total de custos fixos</b></td><td class="n"><b>${brl(R.cf)}</b></td></tr></tbody></table></div>
+   <p class="small muted">Existem mesmo sem vender. Investimento padrão: forno a gás de R$ 6.000 e utensílios de R$ 3.840, vida útil de 10 anos.</p></div>
+  <div class="panel"><h2>11. Margem de contribuição por sabor</h2><div class="formula">MC = preço de venda − custo variável unitário</div>
+   <div class="tbl"><table><thead><tr><th></th>${R.S.map(x=>`<th class="n">${esc(x.nome)}</th>`).join('')}</tr></thead><tbody>
+   <tr><td>Preço de venda</td>${R.S.map(x=>`<td class="n">${brl(x.preco)}</td>`).join('')}</tr>
+   <tr><td>(−) Custo variável</td>${R.S.map(x=>`<td class="n">${brl(x.cv)}</td>`).join('')}</tr>
+   <tr class="tot"><td><b>(=) Margem de contribuição</b></td>${R.S.map(x=>`<td class="n"><b style="color:var(${x.mc>=0?'--good':'--bad'})">${brl(x.mc)}</b></td>`).join('')}</tr>
+   <tr><td>MC %</td>${R.S.map(x=>`<td class="n">${pct(x.mcp)}</td>`).join('')}</tr></tbody></table></div>
+   <div class="kpis">${kpi('MC média por pizza',brl(R.mcm),`ponderada pelo pedido · ${pct(R.mcp)} de cada real vendido`,R.mcm>0?'good':'bad')}${kpi('Preço médio',brl(R.pv))}${kpi('Custo variável médio',brl(R.cvm))}</div></div>
+  <div class="panel"><h2>12. Ponto de equilíbrio</h2>
+   <div class="formula">PE (unidades) = custos fixos ÷ MC média = ${brl(R.cf)} ÷ ${brl(R.mcm)} = ${isFinite(R.pe)?num(r2(R.pe)):'—'} pizzas<br>PE (R$) = custos fixos ÷ MC % = ${brl(R.cf)} ÷ ${pct(R.mcp)} = ${isFinite(R.peR)?brl(R.peR):'—'}</div>
+   <div class="kpis">${kpi('Pizzas por mês',pe!=null?num(pe):'—','abaixo disso, prejuízo',pe!=null?'':'bad')}${kpi(`Pizzas por dia (${num(C.dias)} dias)`,pe!=null?num(Math.ceil(pe/Math.max(C.dias,1))):'—','meta diária mínima')}${kpi('Faturamento mínimo por mês',isFinite(R.peR)?brl(R.peR):'—')}${kpi(C.pizzaioloFixo?'PE pagando por hora':'PE com pizzaiolo de salário fixo',isFinite(R.peAlt)?num(Math.ceil(R.peAlt))+' pizzas':'—','comparação fixo × variável')}</div>
+   <div class="chart" style="overflow-x:auto"><svg viewBox="0 0 ${W} ${H}" style="min-width:420px" role="img" aria-label="Gráfico do ponto de equilíbrio">${svg}</svg></div>
+   <div class="form" style="flex-wrap:wrap"><label>Dias de funcionamento por mês${ni('dias',C.dias,1,60)}</label><label>Pizzas vendidas por dia (simulação)${ni('porDia',C.porDia,1,60)}</label></div>
+   <div class="alert ${lucroMes>=0?'good':'bad'}"><span>Vendendo ${num(C.porDia)} pizzas por dia (${num(C.porDia*C.dias)} no mês), a pizzaria tem ${lucroMes>=0?'lucro':'prejuízo'} de <b>${brl(Math.abs(lucroMes))}</b> por mês: ${num(C.porDia*C.dias)} × ${brl(R.mcm)} − ${brl(R.cf)}.</span></div></div>
+  <div class="panel"><h2>13. Resultado do pedido</h2><div class="kpis">${kpi('Receita',brl(R.rec))}${kpi('(−) Custos variáveis',brl(R.cvT))}${kpi('(=) Margem de contribuição',brl(R.rec-R.cvT),`cobre ${pct(R.cf?(R.rec-R.cvT)/R.cf:0)} dos custos fixos do mês`,R.rec-R.cvT>=0?'good':'bad')}</div></div>
+  <div class="panel"><h2>14. Lições para a gestão</h2><ul>
+   ${queijo?`<li><b>O queijo manda no custo:</b> a mussarela é ${pct(queijo.c/R.totL)} dos ingredientes. Comprar no atacado faz diferença.</li>`:''}
+   <li><b>Fixo ou variável muda tudo:</b> ${C.pizzaioloFixo?`com salário fixo, o PE é ${pe!=null?num(pe):'—'} pizzas; pagando por hora, cairia para ${isFinite(R.peAlt)?num(Math.ceil(R.peAlt)):'—'}.`:`pagando por hora, o PE é ${pe!=null?num(pe):'—'} pizzas; com salário fixo, subiria para ${isFinite(R.peAlt)?num(Math.ceil(R.peAlt)):'—'}.`}</li>
+   ${menor?`<li><b>Reveja a pizza de ${esc(menor.nome)}:</b> tem a menor margem de contribuição (${brl(menor.mc)}). Ajuste o preço ou a receita.</li>`:''}
+   <li><b>Embalagem pesa:</b> a caixa de ${brl(C.emb)} é o ${posEmb}º maior custo variável da pizza.</li>
+   <li><b>Forno:</b> assar mais pizzas por fornada reduz o gás por pizza (hoje ${brl(R.gasP)}).</li></ul></div>
+  <div class="panel soft"><h2>Premissas e fontes</h2><ul class="small">
+   <li>Ingredientes: nota fiscal do Regional Supermercado Centro, Barra do Bugres (out/2026). Embalagens consideradas: farinha 1 kg, molho 300 g, azeitona 100 g, óleo 900 ml.</li>
+   <li>Gás: botijão P13 a R$ 127,74 em MT (ANP, set/2026); forno de fogão industrial com 0,38 kg/h (catálogo Venâncio).</li>
+   <li>Mão de obra: R$ 2.800/mês com encargos ÷ 220 h, paga pelas horas de produção.</li>
+   <li>Embalagem: R$ 6,00 por pizza (valor informado pelo projeto).</li>
+   <li>Estimativas didáticas: ovos, ervilha, orégano, sal, açúcar, custos fixos e preços de venda.</li></ul></div>`;
+}
 
 /* ====================== reunião do mês ====================== */
 const AREAS_REUN=[['precos','Preços e cardápio'],['compras','Compras e produção (PCP)'],['vendas','Vendas, encomendas e canais'],['mkt','Marketing'],['pessoas','Pessoas e estrutura'],['fin','Finanças e caixa']];
@@ -2304,7 +2430,7 @@ function vTurma(){
   ${lista.map((e,i)=>`<tr><td class="n">${i+1}</td><td><b>${esc(e.nome)}</b></td><td>${esc(e.turma)}</td><td class="small">${esc(e.socios)}</td><td class="n">${num(e.rodada||1)}</td><td class="n">${brl(e.caixa||0)}</td><td class="n" style="color:var(${(e.lucroAcum||0)>=0?'--good':'--bad'})">${brl(e.lucroAcum||0)}</td><td class="n">${brl(e.patrimonio||0)}</td><td class="n">${num(e.reputacao||0)}</td><td class="n">${num(e.missoes||0)}/${MISSOES.length}</td><td class="small">${e.salvoEm?new Date(e.salvoEm).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'—'}</td></tr>`).join('')}
   </tbody></table></div><p class="small muted">Ordenado pelo patrimônio líquido. O mês indica quantas rodadas a equipe já jogou.</p>`}</div>`;
 }
-const VIEWS={reuniao:vReuniao,canais:vCanais,turma:vTurma,pcp:vPCP,marca:vMarca,painel:vPainel,plano:vPlano,produtos:vProdutos,compras:vCompras,producao:vProducao,vendas:vVendas,financeiro:vFinanceiro,pessoas:vPessoas,mercado:vMercado,relatorios:vRelatorios,missoes:vMissoes};
+const VIEWS={caso:vCaso,reuniao:vReuniao,canais:vCanais,turma:vTurma,pcp:vPCP,marca:vMarca,painel:vPainel,plano:vPlano,produtos:vProdutos,compras:vCompras,producao:vProducao,vendas:vVendas,financeiro:vFinanceiro,pessoas:vPessoas,mercado:vMercado,relatorios:vRelatorios,missoes:vMissoes};
 
 function render(){
   atualizaPrep();
@@ -2332,6 +2458,7 @@ document.addEventListener('change',e=>{
     S.mes.planejou=true;save();render()}
   if(t.id==='canal_delivery'||t.id==='canal_app'){S.canal[t.id.slice(6)]=t.checked;S.stats.canal++;S.mes.revisou=true;save();render();toast(t.id==='canal_app'?(t.checked?`Pizzaria no aplicativo: comissão de ${pct(COMISSAO_APP)} por venda.`:'Pizzaria fora do aplicativo.'):(t.checked?'Delivery próprio ativado.':'Delivery próprio desativado: só salão, balcão e aplicativo.'))}
   if(t.id==='canal_taxa'){S.canal.taxa=clamp(Math.round(parseFloat(t.value)||0),0,15);S.stats.canal++;S.mes.revisou=true;save();render()}
+  if(t.dataset.caso){const ks=t.dataset.caso.split('.');let o=S.caso;for(let i=0;i<ks.length-1;i++)o=o[ks[i]];o[ks[ks.length-1]]=t.type==='checkbox'?t.checked:Math.max(0,parseFloat(String(t.value).replace(',','.'))||0);save();render()}
   if(t.id==='rod_ativo'||t.id==='rod_frios'){S.rodizio[t.id==='rod_ativo'?'ativo':'frios']=t.checked;if(!S.rodizio.ativo)S.rodizio.frios=false;const [a,b]=rodFaixa();S.rodizio.preco=r2(clamp(S.rodizio.preco,a,b));S.stats.canal++;S.mes.revisou=true;save();render();toast(t.id==='rod_ativo'?(t.checked?`Rodízio ativado a ${brl(S.rodizio.preco)} por pessoa.`:'Rodízio desativado.'):(t.checked?`Mesa de frios ativada. Compre frios em Compras e estoque. Preço do rodízio: ${brl(S.rodizio.preco)}.`:'Mesa de frios desativada.'))}
   if(t.id==='rod_preco'){let v=parseFloat(t.value);if(v>0){const [a,b]=rodFaixa(),lim=v<a||v>b;S.rodizio.preco=r2(clamp(v,a,b));S.mes.revisou=true;save();render();toast(lim?`Preço fora da faixa: o rodízio ficou em ${brl(S.rodizio.preco)} (permitido: ${brl(a)} a ${brl(b)}).`:`Rodízio: ${brl(S.rodizio.preco)} por pessoa.`,lim)}}
   if(t.id==='rateio_mes'){S.rateioSel=+t.value;render()}
